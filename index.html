@@ -36,8 +36,8 @@
         
         /* 機票卡片虛線效果 */
         .ticket-card {
-            background: linear-gradient(to right, white 0%, white 10px, transparent 10px, transparent 100%) repeat-y, 
-                        white;
+            /* 讓背景色與底部 extension 保持一致，製造切邊感 */
+            background-color: white; 
             background-size: 100% 100%;
         }
 
@@ -59,7 +59,7 @@
             left: -10px;
             width: 20px;
             height: 20px;
-            background-color: var(--color-bg-ext); /* 外部背景色 */
+            background-color: white; /* 內部卡片背景色 */
             border-radius: 50%;
             z-index: 10;
         }
@@ -69,7 +69,7 @@
             right: -10px;
             width: 20px;
             height: 20px;
-            background-color: var(--color-bg-ext);
+            background-color: white; /* 內部卡片背景色 */
             border-radius: 50%;
             z-index: 10;
         }
@@ -79,14 +79,16 @@
 
 <div id="app" class="max-w-md mx-auto shadow-2xl bg-white min-h-screen">
     
-<header class="relative">
+    <header class="relative">
         <div class="h-[250px] overflow-hidden relative bg-extension">
             <img src="Gemini_Generated_Image_y689rxy689rxy689.jpg" 
                  alt="港式復古橫幅圖片" 
                  class="w-full h-full object-contain mx-auto">
         </div>
         
-        <div class="h-8 bg-white z-10"></div> <div class="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
+        <div class="h-8 bg-white z-10"></div> 
+
+        <div class="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
             
             <button @click="toggleEditMode" 
                     :class="{'bg-deep-red text-white shadow-xl': isEditMode, 'bg-white/90 text-gray-700': !isEditMode}" 
@@ -121,9 +123,9 @@
     </Transition>
 
 
-  <main class="relative z-0">
-    <Transition name="fade" mode="out-in">
-    ```
+    <main class="-mt-8 pt-8 relative z-0">
+        
+        <Transition name="fade" mode="out-in">
         <section v-if="activeTab === 'itinerary'" key="itinerary">
             
             <div class="p-4 pt-0">
@@ -541,7 +543,7 @@
     
     // 建立一個供 Google Maps 全域存取的物件
     window.appFunctions = {};
-    let autocompleteListener = null; // 新增變數來儲存 Autocomplete 監聽器，防止重複初始化
+    let autocompleteListener = null; 
 
     // --- 輔助函式：時間與持續時間處理 ---
 
@@ -973,9 +975,9 @@
                 return 'fas fa-bus-alt';
             };
 
-            // 💥 CRITICAL FIX: 修正拼寫錯誤，使用標準的 Google Maps 搜尋 URL 格式
             const openGoogleMaps = (location) => {
                 const query = location;
+                // 修正後的連結格式
                 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 window.open(mapUrl, '_blank');
             };
@@ -1020,19 +1022,6 @@
             // 確保元素存在
             const input = document.getElementById('location-autocomplete');
             if (!input) return; 
-
-            // 檢查是否已初始化，如果已初始化則先移除舊的監聽
-            if (autocompleteListener) {
-                // 由於 Autocomplete API 沒有明確的 destroy 方法，最安全是避免重複初始化
-                // 這裡我們只允許初始化一次，因為 input 是在模態視窗內，每次打開是同一個元素，如果需要重置，需更複雜的邏輯。
-                // 為了簡化，我們只初始化一次，依賴 Vue 在模態視窗隱藏時將其從 DOM 中移除（但您使用的是 v-if，所以它確實會被移除/重建）。
-            }
-
-            const options = {
-                types: ['establishment', 'geocode'], 
-                componentRestrictions: { country: 'hk' },
-                fields: ['name', 'formatted_address', 'opening_hours'],
-            };
 
             // 只有在還未初始化時才進行初始化
             if (!input.classList.contains('autocomplete-initialized')) {
