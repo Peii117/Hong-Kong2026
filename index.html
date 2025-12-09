@@ -280,6 +280,42 @@
             </div>
             
         </section>
+        
+        <section v-else-if="activeTab === 'expense'" key="expense" class="p-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">花費記錄</h2>
+            
+            <div class="bg-royal-blue text-white p-4 rounded-xl mb-4 shadow-lg text-center">
+                <p class="text-sm font-semibold">總花費 (TWD)</p>
+                <p class="text-4xl font-bold">{{ totalExpenseTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</p>
+            </div>
+
+            <button v-if="isEditMode" @click="openAddItemModal('expense')" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
+                <i class="fas fa-plus mr-1"></i> 新增開銷
+            </button>
+
+            <div class="space-y-3">
+                <div v-for="(item, index) in expenses" :key="item.id" 
+                     @click="isEditMode && openAddItemModal('expense', item)"
+                     :class="{'cursor-pointer hover:shadow-md transition': isEditMode}"
+                     class="bg-white p-3 rounded-xl shadow-sm border-l-4"
+                     :style="{'border-left-color': item.paymentMethod === '現金' ? '#10B981' : '#3B82F6'}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ item.category }}</span>
+                            <p class="font-bold text-gray-800 mt-1">{{ item.name }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ item.date }} | {{ item.paymentMethod }}
+                                <span v-if="item.payer" class="ml-2 font-semibold text-deep-red">({{ item.payer }})</span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-deep-red">{{ item.amount.toLocaleString() }} {{ item.currency }}</p>
+                            <p class="text-xs text-gray-500">≈ {{ item.amountTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }} TWD</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section v-else-if="activeTab === 'food'" key="food" class="p-4">
             <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">美食清單 (待開發)</h2>
@@ -314,42 +350,6 @@
                         <p class="font-bold text-gray-800">{{ item.name }}</p>
                         <p class="text-xs font-semibold text-deep-red">{{ item.category }}</p>
                         <p v-if="item.notes" class="text-sm text-gray-500">備註: {{ item.notes }}</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section v-else-if="activeTab === 'expense'" key="expense" class="p-4">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">花費記錄</h2>
-            
-            <div class="bg-royal-blue text-white p-4 rounded-xl mb-4 shadow-lg text-center">
-                <p class="text-sm font-semibold">總花費 (TWD)</p>
-                <p class="text-4xl font-bold">{{ totalExpenseTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</p>
-            </div>
-
-            <button v-if="isEditMode" @click="openAddItemModal('expense')" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
-                <i class="fas fa-plus mr-1"></i> 新增開銷
-            </button>
-
-            <div class="space-y-3">
-                <div v-for="(item, index) in expenses" :key="item.id" 
-                     @click="isEditMode && openAddItemModal('expense', item)"
-                     :class="{'cursor-pointer hover:shadow-md transition': isEditMode}"
-                     class="bg-white p-3 rounded-xl shadow-sm border-l-4"
-                     :style="{'border-left-color': item.paymentMethod === '現金' ? '#10B981' : '#3B82F6'}">
-                    <div class="flex justify-between items-center">
-                        <div class="flex-grow">
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ item.category }}</span>
-                            <p class="font-bold text-gray-800 mt-1">{{ item.name }}</p>
-                            <p class="text-xs text-gray-500">
-                                {{ item.date }} | {{ item.paymentMethod }}
-                                <span v-if="item.payer" class="ml-2 font-semibold text-deep-red">({{ item.payer }})</span>
-                            </p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xl font-bold text-deep-red">{{ item.amount.toLocaleString() }} {{ item.currency }}</p>
-                            <p class="text-xs text-gray-500">≈ {{ item.amountTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }} TWD</p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -499,7 +499,12 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold mb-1">付款人</label>
-                            <input type="text" v-model="currentItem.payer" placeholder="例如: 你的名字" class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
+                            <select v-model="currentItem.payer" required class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
+                                <option value="">請選擇</option>
+                                <option value="沛晴">沛晴</option>
+                                <option value="芳晨">芳晨</option>
+                                <option value="玟妤">玟妤</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold mb-1">付款方式</label>
@@ -744,13 +749,18 @@
                 }
             ];
 
+            // 修正選單順序
             const menus = [
                 { tab: 'itinerary', name: '行程表', icon: 'fas fa-list-check' },
+                { tab: 'info', name: '旅行資訊', icon: 'fas fa-info-circle' },
+                { tab: 'expense', name: '花費記錄', icon: 'fas fa-hand-holding-dollar' },
                 { tab: 'food', name: '美食清單', icon: 'fas fa-utensils' },
                 { tab: 'shopping', name: '購物清單', icon: 'fas fa-shopping-bag' },
-                { tab: 'expense', name: '花費記錄', icon: 'fas fa-hand-holding-dollar' },
-                { tab: 'info', name: '旅行資訊', icon: 'fas fa-info-circle' },
             ];
+            
+            // 付款人選項
+            const payers = ['沛晴', '芳晨', '玟妤'];
+
 
             // 載入或初始化數據
             const itineraryData = ref(loadData('itinerary', defaultItinerary));
@@ -849,7 +859,7 @@
                     currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '伴手禮', notes: '' };
                 } else if (type === 'expense') {
                     modalTitle.value = isEditModalMode.value ? `編輯花費: ${item.name}` : '新增花費記錄';
-                    // 確保日期是有效的預設值
+                    // 確保日期是有效的預設值，且 payer 預設為空 (請選擇)
                     currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '飲食', date: new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).replace(/\//g, '/'), amount: 0, currency: 'HKD', paymentMethod: '現金', payer: '', amountTWD: 0 };
                 }
                 isModalOpen.value = true;
@@ -892,7 +902,7 @@
                     saveData('shopping', shoppingList.value);
                     
                 } else if (modalType.value === 'expense') {
-                    if (!currentItem.value.name || !currentItem.value.amount) return alert('請填寫名稱和金額！');
+                    if (!currentItem.value.name || !currentItem.value.amount || !currentItem.value.payer) return alert('請填寫名稱、金額與付款人！');
                     
                     currentItem.value.amountTWD = currentItem.value.currency === 'HKD' 
                         ? currentItem.value.amount * exchangeRate 
@@ -993,7 +1003,7 @@
             return {
                 isEditMode, isMenuOpen, activeTab, selectedShoppingCategory, menus, activeDate, categories, 
                 itineraryData, flightInfo, accommodationInfo, shoppingList, expenses, 
-                foreignAmount, exchangeRate, 
+                foreignAmount, exchangeRate, payers,
                 isModalOpen, isEditModalMode, showDeleteConfirm, modalTitle, modalType, currentItem, isPlaceSelected, currentItemDate,
                 filteredShoppingList, totalExpenseTWD,
 
