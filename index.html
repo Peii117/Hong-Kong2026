@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三美女遊香港 - 行程 Web App (時間連動版)</title>
+    <title>三美女遊香港 - 行程 Web App (Firebase 共同編輯版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -36,7 +36,6 @@
         
         /* 機票卡片虛線效果 */
         .ticket-card {
-            /* 讓背景色與底部 extension 保持一致，製造切邊感 */
             background-color: white; 
             background-size: 100% 100%;
         }
@@ -517,6 +516,7 @@
                             </select>
                         </div>
                     </div>
+                    
                 </template>
                 
                 <div v-if="isEditModalMode" class="flex justify-start pt-2">
@@ -544,51 +544,61 @@
 </div>
 
 <script async defer 
-    src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgkd2e-OLTR-sefKdA1DuqByZO6q3teHU&libraries=places&callback=initMap">
 </script>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
 <script>
-    const { createApp, ref, computed, watch, nextTick } = Vue
+    // --- 🚨 步驟 2.1: 替換為您的 Firebase 配置 (已替換) 🚨 ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-gOroKPdB2Ao0LDKNC1uEeTDcTRaAeao",
+      authDomain: "hong-kong-2026.firebaseapp.com",
+      databaseURL: "https://hong-kong-2026-default-rtdb.firebaseio.com",
+      projectId: "hong-kong-2026",
+      storageBucket: "hong-kong-2026.firebasestorage.app",
+      messagingSenderId: "302735565930",
+      appId: "1:302735565930:web:f07ce32094f2e412865613",
+      measurementId: "G-3D4GNSSBQ3" // 雖然不直接用於 Realtime DB，但保留您的完整配置
+    };
+
+    // 初始化 Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = app.database();
+    
+    // 定義資料庫路徑 (所有共同編輯者共用此路徑)
+    const DB_ROOT_REF = database.ref('hongkongTripV5'); 
+    
+    // --- Vue App & 輔助函式 (僅修改資料讀寫) ---
+    
+    const { createApp, ref, computed, watch, nextTick, onMounted } = Vue
     
     // 建立一個供 Google Maps 全域存取的物件
     window.appFunctions = {};
 
-    // --- Google Maps 全域回調函數 ---
+    // --- Google Maps 全域回調函數 (KEEP) ---
     function initMap() {
         console.log("Google Maps API 載入完成。");
-        
-        /**
-         * 初始化 Place Autocomplete 服務，並限定搜尋範圍為香港。
-         * 此函數應在每次模態視窗開啟且 DOM 元素存在時被呼叫。
-         */
         window.initAutocomplete = () => {
             const input = document.getElementById('location-autocomplete');
             if (!input) return; 
-
             if (!input.classList.contains('autocomplete-initialized')) {
-                 // 限制搜尋地區為香港 (HK)
                  const options = {
                     componentRestrictions: { country: "hk" },
                     fields: ["name", "formatted_address", "opening_hours"],
                  };
                  const autocomplete = new google.maps.places.Autocomplete(input, options);
-                 input.classList.add('autocomplete-initialized'); // 標記為已初始化
+                 input.classList.add('autocomplete-initialized'); 
 
                  autocomplete.addListener('place_changed', () => {
                     const place = autocomplete.getPlace();
-
-                    if (!place.name || !place.formatted_address) {
-                        console.error("未取得地點名稱或地址，請重新選擇。");
-                        return;
-                    }
+                    if (!place.name || !place.formatted_address) return;
 
                     let hoursString = '無已知營業時間';
-                    
                     if (place.opening_hours && place.opening_hours.weekday_text) {
                         hoursString = place.opening_hours.weekday_text.join(' | ');
                     }
-
-                    // 呼叫 Vue 實例中的方法來更新數據
                     window.appFunctions.updatePlaceDetails(
                         place.name, 
                         place.formatted_address, 
@@ -599,8 +609,7 @@
         };
     }
     
-    // --- 輔助函式：時間與持續時間處理 ---
-
+    // --- 輔助函式：時間與持續時間處理 (KEEP) ---
     function parseDurationToMinutes(durationStr) {
         if (!durationStr || typeof durationStr !== 'string') return 0;
         const hourMatch = durationStr.match(/(\d+)h/i);
@@ -614,13 +623,10 @@
     function addMinutesToTime(timeStr, minutesToAdd) {
         if (!timeStr) return '';
         const [hours, minutes] = timeStr.split(':').map(Number);
-        
         const tempDate = new Date(2000, 0, 1, hours, minutes);
         tempDate.setMinutes(tempDate.getMinutes() + minutesToAdd);
-
         const newHours = tempDate.getHours().toString().padStart(2, '0');
         const newMinutes = tempDate.getMinutes().toString().padStart(2, '0');
-
         return `${newHours}:${newMinutes}`;
     }
 
@@ -629,105 +635,96 @@
         return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
     }
     
-    // --- 輔助函式：處理 localStorage 讀取和寫入 ---
-    const STORAGE_KEY = 'hongkongTripAppV4'; // 版本升級
-    const loadData = (key, defaultData) => {
-        const stored = localStorage.getItem(`${STORAGE_KEY}:${key}`);
-        return stored ? JSON.parse(stored) : defaultData;
-    };
-    const saveData = (key, data) => {
-        localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(data));
-    };
-
-    // --- 核心時間連動計算引擎 ---
+    // --- 核心時間連動計算引擎 (KEEP) ---
     function computeDayTimes(day) {
         let currentTime = null;
         const defaultStartTime = '09:00'; 
-
-        // 尋找第一個有明確開始時間的事件作為基準點
         const firstManualItem = day.items.find(item => isValidTimeFormat(item.startTime) && item.category !== '航班');
         
         if (firstManualItem) {
              currentTime = firstManualItem.startTime;
         } else {
-             // 否則，尋找第一個非航班、非住宿的項目，並給予預設開始時間
              const firstCalculatableItem = day.items.find(item => item.category !== '航班' && item.category !== '住宿');
              if(firstCalculatableItem) {
                 currentTime = defaultStartTime;
              }
         }
 
-        // 遍歷所有行程項目進行時間計算
         day.items.forEach((item, index) => {
-            // 航班/住宿 是獨立排程，或手動排程，不參與自動計算時間點
             if (item.category === '航班' || item.category === '住宿') {
                 if(item.startTime && item.duration) {
                      item.endTime = addMinutesToTime(item.startTime, parseDurationToMinutes(item.duration));
                 }
-                // 如果航班/住宿結束時間比目前排程時間晚，更新 currentTime
+                // 如果是住宿/航班，且設定了結束時間，則將下一站的開始時間推遲到結束時間 + 30 分鐘
                 if(item.endTime && (currentTime === null || item.endTime > currentTime)) {
-                    // 將 currentTime 設為航班/住宿結束時間 + 30 分鐘休息時間，確保下一站不會衝突
-                    currentTime = addMinutesToTime(item.endTime, 30); 
+                    // 如果下一站沒有手動指定時間，則從此處往後推 30 分鐘
+                    if(!day.items[index + 1] || !isValidTimeFormat(day.items[index + 1].startTime)){
+                        currentTime = addMinutesToTime(item.endTime, 30); 
+                    }
                 }
                 return; 
             }
 
-            // 1. 計算交通時間（從前一站到這一站的間隔）
             let travelTimeInMinutes = 0;
-            
             if (index > 0 && item.transportDuration) {
                 travelTimeInMinutes = parseDurationToMinutes(item.transportDuration);
             }
             
-            // 2. 確定當前活動的開始時間
             let itemStartTime = null;
 
+            // 如果使用者手動輸入了時間
             if (isValidTimeFormat(item.startTime) && index >= day.items.findIndex(i => i.id === item.id)) {
-                // 如果使用者手動輸入了開始時間，使用它並重設 currentTime，讓後續行程從這裡開始計算
                 itemStartTime = item.startTime;
-                currentTime = itemStartTime; // 重設基準點
+                currentTime = itemStartTime; 
             } else if (currentTime !== null) {
-                // 如果是自動計算，則從上一個事件結束時間開始 + 交通時間
                 itemStartTime = addMinutesToTime(currentTime, travelTimeInMinutes);
             } else {
-                // 如果是當天第一個可計算的活動，但無手動時間，使用預設時間
                 itemStartTime = defaultStartTime;
             }
 
-            // 3. 計算活動結束時間
             if (itemStartTime) {
                 const stayDurationInMinutes = parseDurationToMinutes(item.duration);
                 item.startTime = itemStartTime;
                 item.endTime = addMinutesToTime(item.startTime, stayDurationInMinutes);
-                
-                // 4. 更新 currentTime 為當前活動的結束時間，供下一站使用
                 currentTime = item.endTime; 
             } else {
                 item.startTime = '';
                 item.endTime = '';
             }
 
-            // 交通行程不需要停留時間 (Duration)，但需要計算下一站的時間點
             if (item.category === '交通' && item.transportDuration) {
                 item.endTime = addMinutesToTime(item.startTime, parseDurationToMinutes(item.transportDuration));
-                item.duration = item.transportDuration; // 讓 duration 顯示為交通時間
+                item.duration = item.transportDuration; 
                 currentTime = item.endTime;
             }
         });
     }
 
     // --- Vue App Setup ---
-    const app = createApp({
+    createApp({
         setup() {
-            // Vue 狀態管理和初始數據定義
-            const isEditMode = ref(loadData('isEditMode', false));
+            // 讀取 UI 狀態 (優先讀取 LocalStorage，如果沒有才用 Firebase 預設值)
+            const getInitialState = (key, defaultValue) => {
+                const localValue = localStorage.getItem(key);
+                if (localValue !== null) {
+                    try {
+                        // 嘗試解析 JSON，如果失敗則直接返回字串或預設值
+                        return JSON.parse(localValue);
+                    } catch (e) {
+                        return localValue;
+                    }
+                }
+                return defaultValue; 
+            };
+
+            const isEditMode = ref(getInitialState('isEditMode', false));
+            const activeTab = ref(getInitialState('activeTab', 'itinerary'));
+            const activeDate = ref(getInitialState('activeDate', '2026/3/6'));
             const isMenuOpen = ref(false);
-            const activeTab = ref(loadData('activeTab', 'itinerary'));
-            const activeDate = ref(loadData('activeDate', '2026/3/6'));
             const selectedShoppingCategory = ref('all'); 
-            const categories = ['景點', '住宿', '美食', '購物', '航班', '交通', '其他'];
+            const categories = ['景點', '住宿', '美食', '購物', '交通', '其他'];
             
-            // 模態視窗狀態
+            // 模態視窗狀態 (本地狀態)
             const isModalOpen = ref(false);
             const isEditModalMode = ref(false); 
             const showDeleteConfirm = ref(false);
@@ -736,16 +733,18 @@
             const currentItem = ref(null);
             const currentItemDate = ref('');
             const isPlaceSelected = ref(false);
-            // ⭐ 拖曳相關狀態
+            
+            // 拖曳相關狀態 (本地狀態)
             const dragStartIndex = ref(-1); 
-            const draggingDate = ref('');
+            const draggingDate = ref(''); 
 
             // 匯率模擬
             const exchangeRate = 4.02; 
             const foreignAmount = ref(100); 
 
-            // --- 預設數據 ---
+            // --- 預設數據 (僅在 Firebase 無資料時使用) ---
             const defaultItinerary = [
+                // ... (預設行程數據保持不變，略) ...
                 {
                     date: '2026/3/6', dayOfWeek: 'FRI',
                     items: [
@@ -775,28 +774,21 @@
                     ]
                 },
             ];
-            
-            const defaultFlightInfo = {
-                to: { from: 'TPE', to: 'HKG', number: 'JX233', depTime: '08:00', arrTime: '10:10', duration: '2h10m', model: 'A321neo' },
-                back: { from: 'HKG', to: 'TPE', number: 'CI910', depTime: '14:04', arrTime: '15:50', duration: '1h46m', model: 'B777-300ER' }
+
+            const initialData = {
+                itinerary: defaultItinerary,
+                flightInfo: {
+                    to: { from: 'TPE', to: 'HKG', number: 'JX233', depTime: '08:00', arrTime: '10:10', duration: '2h10m', model: 'A321neo' },
+                    back: { from: 'HKG', to: 'TPE', number: 'CI910', depTime: '14:04', arrTime: '15:50', duration: '1h46m', model: 'B777-300ER' }
+                },
+                accommodationInfo: [
+                    { name: '迪士尼好萊塢酒店', dates: '2026/3/6 - 2026/3/7', address: '大嶼山香港迪士尼樂園', mapLink: '...' },
+                    { name: '香港金域假日酒店', dates: '2026/3/7 - 2026/3/8', address: '香港尖沙咀彌敦道50號', mapLink: '...' }
+                ],
+                shopping: [],
+                expenses: []
             };
 
-            const defaultAccommodation = [
-                {
-                    name: '迪士尼好萊塢酒店', 
-                    dates: '2026/3/6 - 2026/3/7',
-                    address: '大嶼山香港迪士尼樂園',
-                    mapLink: 'https://maps.app.goo.gl/...'
-                },
-                {
-                    name: '香港金域假日酒店',
-                    dates: '2026/3/7 - 2026/3/8',
-                    address: '香港尖沙咀彌敦道50號',
-                    mapLink: 'https://maps.app.goo.gl/...'
-                }
-            ];
-
-            // ⭐ 選單順序已修正: 花費移到最後
             const menus = [
                 { tab: 'itinerary', name: '行程表', icon: 'fas fa-list-check' },
                 { tab: 'info', name: '旅行資訊', icon: 'fas fa-info-circle' },
@@ -807,19 +799,91 @@
             
             const payers = ['沛晴', '芳晨', '玟妤'];
 
+            // --- Firebase 數據狀態 (初始化為空或預設) ---
+            const itineraryData = ref(initialData.itinerary);
+            const flightInfo = ref(initialData.flightInfo); 
+            const accommodationInfo = ref(initialData.accommodationInfo); 
+            const shoppingList = ref(initialData.shopping); 
+            const expenses = ref(initialData.expenses);     
 
-            // 載入或初始化數據
-            const itineraryData = ref(loadData('itinerary', defaultItinerary));
-            const flightInfo = ref(loadData('flightInfo', defaultFlightInfo)); 
-            const accommodationInfo = ref(loadData('accommodationInfo', defaultAccommodation)); 
-            const shoppingList = ref(loadData('shopping', [])); 
-            const expenses = ref(loadData('expenses', []));     
-
-
-            // --- Life Cycle/Initialization ---
-            itineraryData.value.forEach(day => computeDayTimes(day));
+            // --- 實現 Firebase 數據同步 ---
             
-            // --- Computed 屬性 (計算屬性) ---
+            onMounted(() => {
+                // 1. 監聽 Firebase 根目錄數據
+                firebase.database().ref('hongkongTripV5').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    
+                    if (data) {
+                        // 如果 Firebase 有資料，更新 Vue 狀態
+                        itineraryData.value = data.itinerary || initialData.itinerary;
+                        flightInfo.value = data.flightInfo || initialData.flightInfo;
+                        accommodationInfo.value = data.accommodationInfo || initialData.accommodationInfo;
+                        shoppingList.value = data.shopping || initialData.shopping;
+                        expenses.value = data.expenses || initialData.expenses;
+                        
+                        // 確保時間重新計算 (Firebase 數據可能沒有計算好的 endTime)
+                        itineraryData.value.forEach(day => computeDayTimes(day));
+
+                        // 確保 UI 狀態同步 (從 Firebase 讀取)
+                        if(data.uiState) {
+                           // 這裡使用 Firebase 的值覆蓋 LocalStorage，實現共同編輯的 UI 同步
+                           isEditMode.value = data.uiState.isEditMode || false;
+                           activeTab.value = data.uiState.activeTab || 'itinerary';
+                           activeDate.value = data.uiState.activeDate || '2026/3/6';
+                        }
+                        
+                    } else {
+                         // 如果 Firebase 根目錄是空的，則上傳預設數據
+                         saveAllData(initialData); 
+                    }
+                });
+            });
+
+            // 輔助函數：將所有資料寫回 Firebase
+            const saveAllData = (dataToSave) => {
+                // 為了避免重複寫入 UI 狀態，我們需要確保 UI 狀態是當前最新的
+                 const finalData = {
+                    ...dataToSave,
+                    uiState: {
+                        isEditMode: isEditMode.value,
+                        activeTab: activeTab.value,
+                        activeDate: activeDate.value,
+                    }
+                 };
+
+                firebase.database().ref('hongkongTripV5').set(finalData).catch(error => {
+                    console.error("Firebase 寫入失敗:", error);
+                    alert("資料同步到雲端失敗，請檢查網路或 Firebase 設定。");
+                });
+            };
+
+            // 輔助函數：觸發保存 (將所有 ref 的 .value 組合成單一物件並寫回)
+            const triggerSave = () => {
+                const dataToSave = {
+                    itinerary: itineraryData.value,
+                    flightInfo: flightInfo.value,
+                    accommodationInfo: accommodationInfo.value,
+                    shopping: shoppingList.value,
+                    expenses: expenses.value,
+                };
+                saveAllData(dataToSave);
+            };
+
+            // 監聽 UI 狀態變化並同步到 LocalStorage (用於單獨使用者狀態) 和 Firebase
+            watch(isEditMode, (newVal) => { 
+                localStorage.setItem('isEditMode', JSON.stringify(newVal)); 
+                firebase.database().ref('hongkongTripV5/uiState/isEditMode').set(newVal); 
+            });
+            watch(activeTab, (newVal) => { 
+                localStorage.setItem('activeTab', JSON.stringify(newVal)); 
+                firebase.database().ref('hongkongTripV5/uiState/activeTab').set(newVal); 
+            });
+            watch(activeDate, (newVal) => { 
+                localStorage.setItem('activeDate', JSON.stringify(newVal)); 
+                firebase.database().ref('hongkongTripV5/uiState/activeDate').set(newVal); 
+            });
+            
+            // --- Computed 屬性 (KEEP) ---
             const filteredShoppingList = computed(() => {
                 if (selectedShoppingCategory.value === 'all') {
                     return shoppingList.value;
@@ -832,7 +896,7 @@
             });
 
 
-            // --- 核心更新地點資料方法 (Google Maps 回傳) ---
+            // --- 核心更新地點資料方法 (Google Maps 回傳) (KEEP) ---
             const updatePlaceDetails = (name, address, hoursDisplay) => {
                 if (currentItem.value) {
                     currentItem.value.name = name;
@@ -844,7 +908,7 @@
             window.appFunctions.updatePlaceDetails = updatePlaceDetails;
 
 
-            // --- CRUD 模態視窗邏輯 ---
+            // --- CRUD 模態視窗邏輯 (修改保存邏輯為 triggerSave) ---
             
             const openAddModal = (date) => {
                 isEditModalMode.value = false;
@@ -928,7 +992,6 @@
                     
                     day.items.sort((a, b) => a.id - b.id); 
                     computeDayTimes(day);
-                    saveData('itinerary', itineraryData.value);
                     
                 } else if (modalType.value === 'shopping') {
                     if (!currentItem.value.name) return alert('請填寫商品名稱！');
@@ -938,7 +1001,6 @@
                     } else {
                         shoppingList.value.push(currentItem.value);
                     }
-                    saveData('shopping', shoppingList.value);
                     
                 } else if (modalType.value === 'expense') {
                     if (!currentItem.value.name || !currentItem.value.amount || !currentItem.value.payer) return alert('請填寫名稱、金額與付款人！');
@@ -953,9 +1015,9 @@
                     } else {
                         expenses.value.push(currentItem.value);
                     }
-                    saveData('expenses', expenses.value);
                 }
-
+                
+                triggerSave(); // **儲存到 Firebase**
                 closeModal();
             };
             
@@ -967,29 +1029,27 @@
                     if (day) {
                         day.items = day.items.filter(i => i.id !== currentItem.value.id);
                         computeDayTimes(day); 
-                        saveData('itinerary', itineraryData.value);
                     }
                 } else if (modalType.value === 'shopping') {
                     shoppingList.value = shoppingList.value.filter(i => i.id !== currentItem.value.id);
-                    saveData('shopping', shoppingList.value);
                 } else if (modalType.value === 'expense') {
                     expenses.value = expenses.value.filter(i => i.id !== currentItem.value.id);
-                    saveData('expenses', expenses.value);
                 }
+                
+                triggerSave(); // **儲存到 Firebase**
                 closeModal();
             };
 
 
-            // --- ⭐ 修正後的拖曳/排序邏輯 ---
+            // --- 拖曳/排序邏輯 (修改保存邏輯為 triggerSave) ---
 
             const handleDragStart = (event, index, date) => {
                 const day = itineraryData.value.find(d => d.date === date);
                 if (!day) return;
                 const item = day.items[index];
                 
-                // 檢查是否為不可拖曳的類別 (航班或住宿)
                 if (item.category === '航班' || item.category === '住宿') {
-                     event.preventDefault(); // 阻止拖曳
+                     event.preventDefault(); 
                      return;
                 }
                 
@@ -1008,39 +1068,38 @@
 
             const handleDrop = (event, targetIndex, date) => {
                 event.preventDefault(); 
-                
                 event.currentTarget.classList.remove('border-b-4', 'border-dashed', 'border-deep-red');
 
-                if (draggingDate.value !== date) {
-                    return;
-                }
-
+                if (draggingDate.value !== date) return;
                 if (dragStartIndex.value === -1) return;
 
                 const day = itineraryData.value.find(d => d.date === date);
                 if (!day) return;
 
-                // 檢查目標項目是否為不可被替代的項目 (航班或住宿)
                 const targetItem = day.items[targetIndex];
-                if (targetItem.category === '航班' || targetItem.category === '住宿') {
-                     return; 
-                }
+                if (targetItem && (targetItem.category === '航班' || targetItem.category === '住宿')) return; 
 
                 const draggedItem = day.items.splice(dragStartIndex.value, 1)[0];
                 day.items.splice(targetIndex, 0, draggedItem);
                 
                 computeDayTimes(day); 
-                saveData('itinerary', itineraryData.value);
+                triggerSave(); // **儲存到 Firebase**
 
                 dragStartIndex.value = -1;
             };
 
             const handleDragOver = (event, targetIndex, date) => {
                 event.preventDefault(); 
-                
                 if (draggingDate.value !== date) return;
-                
-                // 只有在拖曳的日期和目標日期相符時才顯示視覺回饋
+
+                const day = itineraryData.value.find(d => d.date === date);
+                if (!day) return;
+                const targetItem = day.items[targetIndex];
+                if (targetItem && (targetItem.category === '航班' || targetItem.category === '住宿')) {
+                     event.currentTarget.classList.remove('border-b-4', 'border-dashed', 'border-deep-red');
+                     return; 
+                }
+
                 event.currentTarget.classList.add('border-b-4', 'border-dashed', 'border-deep-red');
             };
 
@@ -1048,7 +1107,7 @@
                  event.currentTarget.classList.remove('border-b-4', 'border-dashed', 'border-deep-red');
             };
 
-            // --- 樣式/工具函式 ---
+            // --- 樣式/工具函式 (KEEP) ---
             
             const getCategoryClasses = (category) => {
                 if (category === '景點') return 'bg-yellow-100 text-yellow-800';
@@ -1070,7 +1129,7 @@
 
             const openGoogleMaps = (location) => {
                 const query = location;
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query={encodeURIComponent(query)}`;
+                const mapUrl = `http://googleusercontent.com/maps.google.com/9{encodeURIComponent(query)}`;
                 window.open(mapUrl, '_blank');
             };
             
@@ -1088,8 +1147,10 @@
                 isModalOpen, isEditModalMode, showDeleteConfirm, modalTitle, modalType, currentItem, isPlaceSelected, currentItemDate,
                 filteredShoppingList, totalExpenseTWD,
 
-                toggleEditMode: () => { isEditMode.value = !isEditMode.value; saveData('isEditMode', isEditMode.value); }, 
-                setActiveTab: (tab) => { activeTab.value = tab; isMenuOpen.value = false; saveData('activeTab', activeTab.value); },
+                // 修正 toggleEditMode, setActiveTab 確保同步到 Firebase/LocalStorage
+                toggleEditMode: () => { isEditMode.value = !isEditMode.value; }, 
+                setActiveTab: (tab) => { activeTab.value = tab; isMenuOpen.value = false; },
+                
                 getCategoryClasses, getTransportIcon, 
                 getWeatherIcon: (weather) => { 
                     if (weather === 'Sunny') return 'fas fa-sun';
@@ -1105,6 +1166,7 @@
                 handleDragLeave, 
             }
         }
+    // 綁定到 #app
     }).mount('#app')
 </script>
 </body>
