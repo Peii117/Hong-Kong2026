@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三美女遊香港 - 行程 Web App </title>
+    <title>三美女遊香港 - 行程 Web App (優化版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -48,21 +48,40 @@
         
         <div class="absolute bottom-0 left-0 right-0 h-10 bg-white rounded-t-3xl -mb-8 z-10"></div>
 
-        <div class="absolute bottom-4 right-4 z-20 flex space-x-3 p-2 rounded-full bg-white/90 shadow-xl">
-            <button @click="setActiveTab('itinerary')" :class="{'bg-deep-red text-white': activeTab === 'itinerary', 'text-gray-600': activeTab !== 'itinerary'}" class="p-2 rounded-full transition duration-300">
-                <i class="fas fa-map-marker-alt fa-lg"></i>
+        <div class="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
+            
+            <button @click="toggleEditMode" 
+                    :class="{'bg-deep-red text-white shadow-xl': isEditMode, 'bg-white/90 text-gray-700': !isEditMode}" 
+                    class="p-2 rounded-full transition duration-300 shadow-md flex items-center text-sm">
+                <i :class="isEditMode ? 'fas fa-pen-nib' : 'fas fa-eye'" class="mr-1"></i>
+                {{ isEditMode ? '編輯中' : '瀏覽模式' }}
             </button>
-            <button @click="setActiveTab('info')" :class="{'bg-deep-red text-white': activeTab === 'info', 'text-gray-600': activeTab !== 'info'}" class="p-2 rounded-full transition duration-300">
-                <i class="fas fa-info fa-lg"></i>
-            </button>
-            <button @click="setActiveTab('shopping')" :class="{'bg-deep-red text-white': activeTab === 'shopping', 'text-gray-600': activeTab !== 'shopping'}" class="p-2 rounded-full transition duration-300">
-                <i class="fas fa-shopping-basket fa-lg"></i>
-            </button>
-            <button @click="setActiveTab('expense')" :class="{'bg-deep-red text-white': activeTab === 'expense', 'text-gray-600': activeTab !== 'expense'}" class="p-2 rounded-full transition duration-300">
-                <i class="fas fa-money-bill-wave fa-lg"></i>
+
+            <button @click="isMenuOpen = !isMenuOpen" 
+                    class="p-3 rounded-xl bg-white/90 text-gray-700 shadow-md hover:bg-white transition duration-300">
+                <i class="fas fa-bars fa-lg"></i>
             </button>
         </div>
     </header>
+    
+    <Transition name="fade">
+    <div v-if="isMenuOpen" class="fixed inset-0 z-40">
+        <div @click="isMenuOpen = false" class="absolute inset-0 bg-black opacity-40"></div>
+        <div class="absolute top-0 right-0 w-64 bg-white h-full shadow-2xl p-6">
+            <h3 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">功能選單</h3>
+            <ul class="space-y-4">
+                <li v-for="menu in menus" :key="menu.tab" 
+                    @click="setActiveTab(menu.tab)"
+                    :class="{'bg-deep-red text-white shadow-md': activeTab === menu.tab, 'text-gray-700 hover:bg-gray-100': activeTab !== menu.tab}"
+                    class="p-3 rounded-lg flex items-center cursor-pointer transition duration-200">
+                    <i :class="menu.icon" class="w-5 mr-3"></i>
+                    <span>{{ menu.name }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+    </Transition>
+
 
     <main class="-mt-8 pt-8 relative z-0 p-4">
         
@@ -70,6 +89,15 @@
         <section v-if="activeTab === 'itinerary'" key="itinerary">
             <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">每日行程表</h2>
             
+            <div class="bg-blue-50 p-3 rounded-xl mb-4 flex items-center shadow-sm border-l-4 border-royal-blue">
+                <i :class="getWeatherIcon('Sunny')" class="text-orange-400 text-3xl mr-3"></i>
+                <div>
+                    <p class="font-bold text-gray-800">香港當地天氣</p>
+                    <p class="text-sm text-gray-600">氣溫: 22°C / 體感: 24°C</p>
+                    <p class="text-xs text-red-500">（需整合天氣 API）</p>
+                </div>
+            </div>
+
             <div class="flex overflow-x-scroll space-x-4 pb-4 hide-scrollbar">
                 <div v-for="day in itineraryData" :key="day.date" 
                      @click="activeDate = day.date"
@@ -79,35 +107,25 @@
                     <span class="date-num">{{ day.date.split('/')[2] }}</span>
                 </div>
             </div>
-
-            <div class="mb-4">
-                <select v-model="selectedCategory" class="w-full p-2 border border-gray-300 rounded-lg text-sm text-gray-600 focus:ring-deep-red focus:border-deep-red">
-                    <option value="all">所有分類</option>
-                    <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-                </select>
-            </div>
-
+            
             <div class="mt-4">
                 <div v-for="day in itineraryData" :key="day.date">
                     <div v-if="activeDate === day.date">
                         
-                        <div class="bg-blue-50 p-3 rounded-xl mb-4 flex items-center shadow-sm border-l-4 border-royal-blue">
-                            <i :class="getWeatherIcon('Sunny')" class="text-orange-400 text-3xl mr-3"></i>
-                            <div>
-                                <p class="font-bold text-gray-800">香港當地天氣</p>
-                                <p class="text-sm text-gray-600">氣溫: 22°C / 體感: 24°C</p>
-                                <p class="text-xs text-red-500">（需整合天氣 API）</p>
-                            </div>
-                        </div>
-
+                        <button v-if="isEditMode" @click="openAddModal(day.date)" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
+                            <i class="fas fa-plus mr-1"></i> 新增景點/美食/活動
+                        </button>
+                        
                         <div class="space-y-4">
-                            <div v-for="(item, index) in filteredItineraryItems(day.items)" :key="item.id" 
-                                 class="bg-white p-4 rounded-xl shadow-lg border-l-4 transition duration-200"
-                                 :class="{'border-deep-red': item.category !== '航班', 'border-gray-500': item.category === '航班', 'opacity-90': item.category === '交通'}"
-                                 draggable="true" 
-                                 @dragstart="handleDragStart(index, day.date)"
-                                 @drop="handleDrop(index, day.date)"
-                                 @dragover.prevent>
+                            <div v-for="(item, index) in day.items" :key="item.id" 
+                                 :class="{'cursor-pointer hover:shadow-lg transition duration-200': isEditMode, 'opacity-70': item.category === '交通'}"
+                                 @click="isEditMode && openEditModal(item, day.date)"
+                                 :draggable="isEditMode" 
+                                 @dragstart="isEditMode && handleDragStart(index, day.date)"
+                                 @drop="isEditMode && handleDrop(index, day.date)"
+                                 @dragover.prevent
+                                 class="bg-white p-4 rounded-xl shadow-lg border-l-4"
+                                 :style="{'border-left-color': item.category === '航班' ? '#9CA3AF' : item.category === '住宿' ? '#4169E1' : '#D93025'}">
                                 
                                 <div v-if="index > 0 || day.date !== '2026/3/6'" class="mb-2 text-xs text-gray-500 flex items-center font-mono">
                                     <i :class="getTransportIcon(item.transport)" class="mr-1"></i>
@@ -142,7 +160,7 @@
                                             </span>
                                             <h3 class="text-lg font-bold mt-1 text-gray-800">{{ item.name }}</h3>
                                         </div>
-                                        <button @click="openGoogleMaps(item.location)" title="導航" class="text-royal-blue hover:text-deep-red transition duration-200 flex-shrink-0 p-2">
+                                        <button @click.stop="openGoogleMaps(item.location)" title="導航" class="text-royal-blue hover:text-deep-red transition duration-200 flex-shrink-0 p-2">
                                             <i class="fas fa-route fa-lg"></i>
                                         </button>
                                     </div>
@@ -152,14 +170,9 @@
                                         <p v-if="item.ticket"><i class="fas fa-ticket-alt mr-1"></i>門票: {{ item.ticket }}</p>
                                         <p v-if="item.notes"><i class="fas fa-comment-dots mr-1"></i>備註: {{ item.notes }}</p>
                                     </div>
-                                    <button @click="openEditModal(item, day.date)" class="mt-3 text-xs text-deep-red hover:underline">編輯</button>
                                 </template>
                             </div>
                         </div>
-                        
-                        <button @click="openAddModal(day.date)" class="fixed bottom-6 right-6 bg-deep-red text-white p-4 rounded-full shadow-2xl hover:bg-red-700 transition duration-300 z-30">
-                            <i class="fas fa-plus fa-lg"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -178,7 +191,6 @@
                         {{ (foreignAmount * exchangeRate).toFixed(2) }} TWD
                     </div>
                 </div>
-                <p class="text-xs text-red-500 mt-2">（需整合即時匯率 API）</p>
             </div>
 
             <div class="bg-white p-4 rounded-xl mb-6 shadow-md border-t-4 border-deep-red">
@@ -200,16 +212,10 @@
                 <div v-for="hotel in accommodationInfo" :key="hotel.name" class="mb-4 pb-2 border-b last:border-b-0">
                     <p class="font-bold text-md">{{ hotel.name }}</p>
                     <p class="text-sm text-gray-600">日期: {{ hotel.dates }}</p>
-                    <p class="text-sm text-gray-600">電話: {{ hotel.phone }}</p>
                     <p class="text-sm text-gray-600">地址: {{ hotel.address }}</p>
                     <a :href="hotel.mapLink" target="_blank" class="text-xs text-deep-red hover:underline"><i class="fas fa-route mr-1"></i>導航至飯店</a>
                 </div>
-                <p class="text-xs text-gray-400 mt-2">（此資訊需手動修改程式碼，不支援網頁編輯）</p>
-            </div>
-
-            <div class="bg-red-50 p-4 rounded-xl shadow-md border-t-4 border-deep-red">
-                <h3 class="font-bold text-lg mb-2 text-deep-red"><i class="fas fa-bell mr-2"></i>緊急聯絡 (警察 / 救護車)</h3>
-                <p class="text-4xl font-mono text-center text-deep-red">999</p>
+                <p class="text-xs text-gray-400 mt-2">（此資訊需手動修改程式碼）</p>
             </div>
             
         </section>
@@ -217,13 +223,18 @@
         <section v-else-if="activeTab === 'shopping'" key="shopping">
             <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">購物清單</h2>
             
+            <button v-if="isEditMode" @click="openAddItemModal('shopping')" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
+                <i class="fas fa-plus mr-1"></i> 新增購物項目
+            </button>
+
             <div class="space-y-4">
                 <div v-for="(item, index) in shoppingList" :key="item.id" 
-                     @click="openAddItemModal('shopping', item)"
-                     class="bg-white p-4 rounded-xl shadow-md flex items-center border-l-4 border-royal-blue hover:shadow-lg transition cursor-pointer">
+                     @click="isEditMode && openAddItemModal('shopping', item)"
+                     :class="{'cursor-pointer hover:shadow-lg transition duration-200': isEditMode}"
+                     class="bg-white p-4 rounded-xl shadow-md flex items-center border-l-4 border-royal-blue">
+                    
                     <div class="w-16 h-16 bg-gray-100 rounded-lg mr-4 flex items-center justify-center overflow-hidden">
-                        <img v-if="item.image" :src="item.image" :alt="item.name" class="w-full h-full object-cover">
-                        <i v-else class="fas fa-camera text-gray-400 text-xl"></i>
+                        <i class="fas fa-camera text-gray-400 text-xl"></i>
                     </div>
                     <div class="flex-grow">
                         <p class="font-bold text-gray-800">{{ item.name }}</p>
@@ -231,10 +242,6 @@
                     </div>
                 </div>
             </div>
-
-            <button @click="openAddItemModal('shopping')" class="fixed bottom-6 right-6 bg-deep-red text-white p-4 rounded-full shadow-2xl hover:bg-red-700 transition duration-300 z-30">
-                <i class="fas fa-plus fa-lg"></i>
-            </button>
         </section>
 
         <section v-else-if="activeTab === 'expense'" key="expense">
@@ -245,16 +252,24 @@
                 <p class="text-4xl font-bold">{{ totalExpenseTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</p>
             </div>
 
+            <button v-if="isEditMode" @click="openAddItemModal('expense')" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
+                <i class="fas fa-plus mr-1"></i> 新增開銷
+            </button>
+
             <div class="space-y-3">
                 <div v-for="(item, index) in expenses" :key="item.id" 
-                     @click="openAddItemModal('expense', item)"
-                     class="bg-white p-3 rounded-xl shadow-sm border-l-4 hover:shadow-md transition cursor-pointer"
-                     :class="getPaymentMethodClass(item.paymentMethod)">
+                     @click="isEditMode && openAddItemModal('expense', item)"
+                     :class="{'cursor-pointer hover:shadow-md transition': isEditMode}"
+                     class="bg-white p-3 rounded-xl shadow-sm border-l-4"
+                     :style="{'border-left-color': item.paymentMethod === '現金' ? '#10B981' : '#3B82F6'}">
                     <div class="flex justify-between items-center">
                         <div class="flex-grow">
                             <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ item.category }}</span>
                             <p class="font-bold text-gray-800 mt-1">{{ item.name }}</p>
-                            <p class="text-xs text-gray-500">{{ item.date }} | <i :class="item.paymentMethod === '現金' ? 'fas fa-money-bill-alt' : 'fas fa-credit-card'"></i> {{ item.paymentMethod }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ item.date }} | {{ item.paymentMethod }}
+                                <span v-if="item.payer" class="ml-2 font-semibold text-deep-red">({{ item.payer }})</span>
+                            </p>
                         </div>
                         <div class="text-right">
                             <p class="text-xl font-bold text-deep-red">{{ item.amount.toLocaleString() }} {{ item.currency }}</p>
@@ -263,14 +278,10 @@
                     </div>
                 </div>
             </div>
-
-            <button @click="openAddItemModal('expense')" class="fixed bottom-6 right-6 bg-deep-red text-white p-4 rounded-full shadow-2xl hover:bg-red-700 transition duration-300 z-30">
-                <i class="fas fa-plus fa-lg"></i>
-            </button>
         </section>
         </Transition>
         
-        <div class="h-20"></div>
+        <div class="h-10"></div>
 
     </main>
 
@@ -320,6 +331,20 @@
                             </select>
                         </div>
                     </div>
+                    <div v-if="currentItem.category === '交通'" class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">交通方式</label>
+                            <select v-model="currentItem.transport" class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue">
+                                <option value="步行">步行</option>
+                                <option value="大眾運輸">大眾運輸</option>
+                                <option value="開車">計程車/開車</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">預計時間</label>
+                            <input type="text" v-model="currentItem.travelTime" placeholder="例如: 約 30 分鐘" class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue">
+                        </div>
+                    </div>
 
                 </template>
 
@@ -343,12 +368,8 @@
                         <div>
                             <label class="block text-sm font-semibold mb-1">類別</label>
                             <select v-model="currentItem.category" required class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
-                                <option value="交通">交通</option>
-                                <option value="飲食">飲食</option>
-                                <option value="購物">購物</option>
-                                <option value="住宿">住宿</option>
-                                <option value="門票">門票</option>
-                                <option value="其他">其他</option>
+                                <option value="交通">交通</option><option value="飲食">飲食</option><option value="購物">購物</option>
+                                <option value="住宿">住宿</option><option value="門票">門票</option><option value="其他">其他</option>
                             </select>
                         </div>
                         <div>
@@ -364,24 +385,27 @@
                         <div>
                             <label class="block text-sm font-semibold mb-1">貨幣</label>
                             <select v-model="currentItem.currency" class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
-                                <option value="HKD">HKD</option>
-                                <option value="TWD">TWD</option>
+                                <option value="HKD">HKD</option><option value="TWD">TWD</option>
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">付款方式</label>
-                        <select v-model="currentItem.paymentMethod" class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
-                            <option value="現金">現金</option>
-                            <option value="信用卡">信用卡</option>
-                            <option value="電子支付">電子支付</option>
-                        </select>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">付款人 <span class="text-xs text-gray-500">(新增)</span></label>
+                            <input type="text" v-model="currentItem.payer" placeholder="例如: 你的名字" class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">付款方式</label>
+                            <select v-model="currentItem.paymentMethod" class="w-full p-2 border rounded-md focus:ring-deep-red focus:border-deep-red">
+                                <option value="現金">現金</option><option value="信用卡">信用卡</option><option value="電子支付">電子支付</option>
+                            </select>
+                        </div>
                     </div>
                 </template>
                 
-                <div v-if="isEditMode" class="flex justify-end pt-2">
+                <div v-if="isEditMode" class="flex justify-start pt-2">
                     <button type="button" @click="showDeleteConfirm = true" class="px-3 py-1 bg-red-100 text-deep-red font-semibold rounded-lg hover:bg-red-200 transition text-sm">
-                        <i class="fas fa-trash-alt mr-1"></i> 刪除
+                        <i class="fas fa-trash-alt mr-1"></i> 刪除此項目
                     </button>
                 </div>
 
@@ -408,10 +432,10 @@
 </script>
 
 <script>
-    const { createApp, ref, computed, watch, onMounted } = Vue
+    const { createApp, ref, computed, watch } = Vue
     
     // --- 輔助函式：處理 localStorage 讀取和寫入 ---
-    const STORAGE_KEY = 'hongkongTripAppV1';
+    const STORAGE_KEY = 'hongkongTripAppV2'; // 更改版本號，避免與舊版衝突
 
     const loadData = (key, defaultData) => {
         const stored = localStorage.getItem(`${STORAGE_KEY}:${key}`);
@@ -425,14 +449,23 @@
     createApp({
         setup() {
             // --- 狀態管理 ---
+            const isEditMode = ref(loadData('isEditMode', false)); // 新增編輯模式狀態
+            const isMenuOpen = ref(false); // 漢堡選單狀態
             const activeTab = ref(loadData('activeTab', 'itinerary'));
             const activeDate = ref(loadData('activeDate', '2026/3/6'));
-            const selectedCategory = ref('all');
             const categories = ['景點', '住宿', '美食', '購物', '航班', '交通', '其他'];
             
+            // 頁面選單定義
+            const menus = [
+                { tab: 'itinerary', name: '每日行程', icon: 'fas fa-map-marker-alt' },
+                { tab: 'info', name: '旅行資訊 (住宿/航班)', icon: 'fas fa-info' },
+                { tab: 'shopping', name: '購物清單', icon: 'fas fa-shopping-basket' },
+                { tab: 'expense', name: '開銷記錄', icon: 'fas fa-money-bill-wave' },
+            ];
+
             // 模態視窗狀態
             const isModalOpen = ref(false);
-            const isEditMode = ref(false);
+            const isEditModalMode = ref(false); // 專門控制 Modal 內的編輯狀態
             const showDeleteConfirm = ref(false);
             const modalTitle = ref('');
             const modalType = ref('');
@@ -443,7 +476,7 @@
             const exchangeRate = 4.02; 
             const foreignAmount = ref(100); 
             
-            // --- 預設數據 (若 LocalStorage 無資料則使用) ---
+            // --- 預設數據 ---
             const defaultItinerary = [
                 {
                     date: '2026/3/6', dayOfWeek: 'FRI',
@@ -480,11 +513,10 @@
                 { id: 2, name: '泰昌餅家蛋塔', image: '', notes: '市區伴手禮' },
             ];
             
-            // TWD 欄位是為了讓 LocalStorage 載入時能正確計算
             const defaultExpenses = [
-                { id: 101, category: '交通', name: '機場快線', date: '2026/3/6', amount: 110, currency: 'HKD', amountTWD: 442, paymentMethod: '信用卡', notes: '' },
-                { id: 102, category: '飲食', name: '迪士尼午餐', date: '2026/3/6', amount: 350, currency: 'HKD', amountTWD: 1407, paymentMethod: '現金', notes: '米奇造型鬆餅' },
-                { id: 103, category: '購物', name: '蘭桂坊酒錢', date: '2026/3/7', amount: 200, currency: 'HKD', amountTWD: 804, paymentMethod: '信用卡', notes: '一杯調酒' },
+                { id: 101, category: '交通', name: '機場快線', date: '2026/3/6', amount: 110, currency: 'HKD', amountTWD: 442, paymentMethod: '信用卡', notes: '', payer: 'Amy' },
+                { id: 102, category: '飲食', name: '迪士尼午餐', date: '2026/3/6', amount: 350, currency: 'HKD', amountTWD: 1407, paymentMethod: '現金', notes: '米奇造型鬆餅', payer: 'Kevin' },
+                { id: 103, category: '購物', name: '蘭桂坊酒錢', date: '2026/3/7', amount: 200, currency: 'HKD', amountTWD: 804, paymentMethod: '信用卡', notes: '一杯調酒', payer: 'Kevin' },
             ];
 
             // --- 從 LocalStorage 載入核心數據 ---
@@ -492,7 +524,7 @@
             const shoppingList = ref(loadData('shopping', defaultShopping));
             const expenses = ref(loadData('expenses', defaultExpenses));
             
-            // --- 靜態數據 (此部分仍需手動修改程式碼) ---
+            // --- 靜態數據 ---
             const flightInfo = {
                 to: { from: 'TPE T1', to: 'HKG T1', depTime: '8:00', arrTime: '10:10', duration: '2h 10m', number: 'JX233', airline: '星宇航空', model: 'A321neo' },
                 back: { from: 'HKG T1', to: 'TPE T1', depTime: '14:04', arrTime: '15:50', duration: '1h 46m', number: 'CI910', airline: '中華航空', model: 'A321neo' },
@@ -509,11 +541,11 @@
             watch(expenses, (newVal) => saveData('expenses', newVal), { deep: true });
             watch(activeTab, (newVal) => saveData('activeTab', newVal));
             watch(activeDate, (newVal) => saveData('activeDate', newVal));
+            watch(isEditMode, (newVal) => saveData('isEditMode', newVal));
 
             // --- 計算屬性 ---
             const totalExpenseTWD = computed(() => {
                 return expenses.value.reduce((total, item) => {
-                    // 根據貨幣計算 TWD 總額，確保新項目也能被正確計算
                     if (item.currency === 'TWD') {
                         return total + item.amount;
                     }
@@ -522,15 +554,13 @@
             });
             
             // --- 函式 ---
-            const setActiveTab = (tab) => {
-                activeTab.value = tab;
+            const toggleEditMode = () => {
+                isEditMode.value = !isEditMode.value;
             };
 
-            const filteredItineraryItems = (items) => {
-                if (selectedCategory.value === 'all') {
-                    return items;
-                }
-                return items.filter(item => item.category === selectedCategory.value);
+            const setActiveTab = (tab) => {
+                activeTab.value = tab;
+                isMenuOpen.value = false; // 切換 Tab 後關閉選單
             };
 
             const closeModal = () => {
@@ -542,9 +572,9 @@
             // --- 核心 CRUD 邏輯 ---
             
             const openAddModal = (date) => {
-                isEditMode.value = false;
+                isEditModalMode.value = false;
                 modalType.value = 'itinerary';
-                modalTitle.value = '新增行程';
+                modalTitle.value = '新增景點/美食/活動';
                 currentItem.value = { 
                     id: Date.now(),
                     category: '景點', 
@@ -562,10 +592,9 @@
             };
 
             const openEditModal = (item, date) => {
-                isEditMode.value = true;
+                isEditModalMode.value = true;
                 modalType.value = 'itinerary';
                 modalTitle.value = `編輯: ${item.name}`;
-                // 深度複製，避免直接修改列表中的數據
                 currentItem.value = JSON.parse(JSON.stringify(item));
                 currentItemDate.value = date;
                 showDeleteConfirm.value = false;
@@ -573,24 +602,23 @@
             };
             
             const openAddItemModal = (type, item = null) => {
-                isEditMode.value = !!item;
+                isEditModalMode.value = !!item;
                 modalType.value = type;
                 
                 if (item) {
                     currentItem.value = JSON.parse(JSON.stringify(item));
                 } else { 
-                    // 新增時給予預設值
                     if (type === 'shopping') {
                         currentItem.value = { id: Date.now(), name: '', image: '', notes: '' };
                     } else if (type === 'expense') {
-                        currentItem.value = { id: Date.now(), category: '飲食', name: '', date: new Date().toLocaleDateString('zh-TW').replace(/\//g, '/').slice(0,-1), amount: 0, currency: 'HKD', amountTWD: 0, paymentMethod: '現金', notes: '' };
+                        currentItem.value = { id: Date.now(), category: '飲食', name: '', date: new Date().toLocaleDateString('zh-TW').replace(/\//g, '/').slice(0,-1), amount: 0, currency: 'HKD', amountTWD: 0, paymentMethod: '現金', notes: '', payer: '' };
                     }
                 }
 
                 if (type === 'shopping') {
-                    modalTitle.value = isEditMode.value ? '編輯購物清單' : '新增購物清單';
+                    modalTitle.value = isEditModalMode.value ? '編輯購物清單' : '新增購物清單';
                 } else if (type === 'expense') {
-                    modalTitle.value = isEditMode.value ? '編輯花費記錄' : '新增花費記錄';
+                    modalTitle.value = isEditModalMode.value ? '編輯開銷記錄' : '新增開銷記錄';
                 }
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
@@ -602,19 +630,17 @@
                 if (modalType.value === 'itinerary') {
                     const day = itineraryData.value.find(d => d.date === currentItemDate.value);
                     if (day) {
-                        if (isEditMode.value) {
-                            // 編輯：替換舊項目
+                        if (isEditModalMode.value) {
                             const index = day.items.findIndex(i => i.id === currentItem.value.id);
                             if (index !== -1) {
                                 day.items[index] = currentItem.value;
                             }
                         } else {
-                            // 新增：添加到列表末尾
                             day.items.push(currentItem.value);
                         }
                     }
                 } else if (modalType.value === 'shopping') {
-                    if (isEditMode.value) {
+                    if (isEditModalMode.value) {
                         const index = shoppingList.value.findIndex(i => i.id === currentItem.value.id);
                         if (index !== -1) shoppingList.value[index] = currentItem.value;
                     } else {
@@ -628,7 +654,7 @@
                         currentItem.value.amountTWD = currentItem.value.amount;
                     }
                     
-                    if (isEditMode.value) {
+                    if (isEditModalMode.value) {
                         const index = expenses.value.findIndex(i => i.id === currentItem.value.id);
                         if (index !== -1) expenses.value[index] = currentItem.value;
                     } else {
@@ -709,21 +735,17 @@
                 }
             };
 
-            const getPaymentMethodClass = (method) => {
-                return method === '現金' ? 'border-green-500' : 'border-blue-500';
-            };
-
             const openGoogleMaps = (location) => {
                 const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
                 window.open(mapUrl, '_blank');
             };
 
             return {
-                activeTab, activeDate, selectedCategory, categories, itineraryData, flightInfo, accommodationInfo,
-                shoppingList, expenses, foreignAmount, exchangeRate, totalExpenseTWD, isModalOpen, isEditMode,
+                isEditMode, isMenuOpen, activeTab, activeDate, categories, menus, itineraryData, flightInfo, accommodationInfo,
+                shoppingList, expenses, foreignAmount, exchangeRate, totalExpenseTWD, isModalOpen, isEditModalMode,
                 showDeleteConfirm, modalTitle, modalType, currentItem,
-                setActiveTab, getCategoryClasses, getTransportIcon, getWeatherIcon, getPaymentMethodClass,
-                openGoogleMaps, filteredItineraryItems, openAddModal, openEditModal, openAddItemModal,
+                toggleEditMode, setActiveTab, getCategoryClasses, getTransportIcon, getWeatherIcon, 
+                openGoogleMaps, openAddModal, openEditModal, openAddItemModal,
                 closeModal, deleteItem, saveItem, handleDragStart, handleDrop,
             }
         }
