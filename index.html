@@ -543,8 +543,9 @@
     
     // 建立一個供 Google Maps 全域存取的物件
     window.appFunctions = {};
+    let autocompleteListener = null; // 新增變數來儲存 Autocomplete 監聽器，防止重複初始化
 
-    // --- 輔助函式：時間與持續時間處理 (保持不變) ---
+    // --- 輔助函式：時間與持續時間處理 ---
 
     // 1. 將 '1h30m' 或 '30m' 格式的字串轉換為總分鐘數 (integer)
     function parseDurationToMinutes(durationStr) {
@@ -588,10 +589,10 @@
         localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(data));
     };
 
-    // --- 核心時間連動計算引擎 (保持不變) ---
+    // --- 核心時間連動計算引擎 ---
     function computeDayTimes(day) {
         let currentTime = null;
-        const defaultStartTime = '09:00'; // 如果找不到起始時間，預設從 09:00 開始
+        const defaultStartTime = '09:00'; 
 
         // 尋找第一個有明確開始時間的事件作為基準點
         const firstManualItem = day.items.find(item => isValidTimeFormat(item.startTime) && item.category !== '航班');
@@ -608,25 +609,22 @@
 
         // 遍歷所有行程項目進行時間計算
         day.items.forEach((item, index) => {
-            // 航班是獨立排程，不參與自動計算
+            // 航班/住宿 是獨立排程，或手動排程，不參與自動計算時間點
             if (item.category === '航班' || item.category === '住宿') {
-                // 航班/住宿的 startTime 和 duration 應手動維護
                 if(item.startTime && item.duration) {
                      item.endTime = addMinutesToTime(item.startTime, parseDurationToMinutes(item.duration));
                 }
                 // 如果航班/住宿結束時間比目前排程時間晚，更新 currentTime
                 if(item.endTime && (currentTime === null || item.endTime > currentTime)) {
-                    // 將 currentTime 設為航班結束時間 + 30 分鐘休息時間，確保下一站不會衝突
+                    // 將 currentTime 設為航班/住宿結束時間 + 30 分鐘休息時間，確保下一站不會衝突
                     currentTime = addMinutesToTime(item.endTime, 30); 
                 }
                 return; 
             }
 
             // 1. 計算交通時間（從前一站到這一站的間隔）
-            let previousItem = day.items[index - 1];
             let travelTimeInMinutes = 0;
             
-            // 只有第二個或以後的行程才計算交通時間
             if (index > 0 && item.transportDuration) {
                 travelTimeInMinutes = parseDurationToMinutes(item.transportDuration);
             }
@@ -694,21 +692,14 @@
             const exchangeRate = 4.02; 
             const foreignAmount = ref(100); 
 
-            // --- 預設數據 ---
+            // --- 預設數據 (保持不變) ---
             const defaultItinerary = [
                 {
                     date: '2026/3/6', dayOfWeek: 'FRI',
                     items: [
-                        // 航班：手動時間
                         { id: 1, category: '航班', name: '去程航班', flightNumber: 'JX233', fromAirport: 'TPE T1', toAirport: 'HKG T1', startTime: '08:00', endTime: '10:10', duration: '2h10m', airline: '星宇航空', notes: '空中巴士A321neo', location: '香港國際機場', transport: '航班', transportDuration: '0m' }, 
-                        
-                        // 交通：自動計算 (從航班結束 10:10 + 30m 休息 + 1h20m 交通 = 12:00 開始)
                         { id: 2, category: '交通', name: '計程車至迪士尼', startTime: '10:40', duration: '30m', endTime: '11:10', transport: '開車', transportDuration: '30m', notes: '機場直達迪士尼', location: '香港迪士尼樂園', hoursDisplay: '' },
-                        
-                        // 景點：自動計算
                         { id: 3, category: '景點', name: '香港迪士尼樂園', startTime: '11:10', duration: '5h30m', endTime: '16:40', hoursDisplay: '10:30-20:30', ticket: '已購票', transportDuration: '5m', transport: '步行', notes: '晚上看遊樂園煙火', location: '香港迪士尼樂園' },
-                        
-                        // 住宿：手動時間 (已修正錯字)
                         { id: 4, category: '住宿', name: '迪士尼好萊塢酒店', startTime: '17:00', duration: '1h', endTime: '18:00', hoursDisplay: '15:00 Check-in', transportDuration: '20m', transport: '大眾運輸', notes: '米奇與好友海景客房', location: '迪士尼好萊塢酒店' },
                     ]
                 },
@@ -733,13 +724,11 @@
                 },
             ];
             
-            // 航班資訊 (Info Tab 使用的預設值)
             const defaultFlightInfo = {
                 to: { from: 'TPE', to: 'HKG', number: 'JX233', depTime: '08:00', arrTime: '10:10', duration: '2h10m', model: 'A321neo' },
                 back: { from: 'HKG', to: 'TPE', number: 'CI910', depTime: '14:04', arrTime: '15:50', duration: '1h46m', model: 'B777-300ER' }
             };
 
-            // 住宿資訊 (Info Tab 使用的預設值)
             const defaultAccommodation = [
                 {
                     name: '迪士尼好萊塢酒店', 
@@ -755,7 +744,6 @@
                 }
             ];
 
-            // 漢堡選單項目
             const menus = [
                 { tab: 'itinerary', name: '行程表', icon: 'fas fa-list-check' },
                 { tab: 'food', name: '美食清單', icon: 'fas fa-utensils' },
@@ -766,11 +754,10 @@
 
             // 載入或初始化數據
             const itineraryData = ref(loadData('itinerary', defaultItinerary));
-            // 修正錯誤：將 loadData 的 default 值設為空物件或定義的預設值
             const flightInfo = ref(loadData('flightInfo', defaultFlightInfo)); 
             const accommodationInfo = ref(loadData('accommodationInfo', defaultAccommodation)); 
-            const shoppingList = ref(loadData('shopping', [])); // ⚠️ 修正: 使用空陣列 []
-            const expenses = ref(loadData('expenses', []));     // 修正: 使用空陣列 []
+            const shoppingList = ref(loadData('shopping', [])); 
+            const expenses = ref(loadData('expenses', []));     
 
 
             // --- Life Cycle/Initialization ---
@@ -862,7 +849,8 @@
                     currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '伴手禮', notes: '' };
                 } else if (type === 'expense') {
                     modalTitle.value = isEditModalMode.value ? `編輯花費: ${item.name}` : '新增花費記錄';
-                    currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '飲食', date: new Date().toLocaleDateString('zh-TW').replace(/\//g, '/'), amount: 0, currency: 'HKD', paymentMethod: '現金', payer: '', amountTWD: 0 };
+                    // 確保日期是有效的預設值
+                    currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '飲食', date: new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).replace(/\//g, '/'), amount: 0, currency: 'HKD', paymentMethod: '現金', payer: '', amountTWD: 0 };
                 }
                 isModalOpen.value = true;
             };
@@ -988,8 +976,8 @@
             };
 
             const openGoogleMaps = (location) => {
-                const query = `香港, ${location}`; 
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(query)}`;
+                const query = location; // 移除您在程式碼中添加的 '香港,'，直接使用 location
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 window.open(mapUrl, '_blank');
             };
             
@@ -1011,7 +999,7 @@
                 toggleEditMode: () => { isEditMode.value = !isEditMode.value; saveData('isEditMode', isEditMode.value); }, 
                 setActiveTab: (tab) => { activeTab.value = tab; isMenuOpen.value = false; saveData('activeTab', activeTab.value); },
                 getCategoryClasses, getTransportIcon, 
-                getWeatherIcon: (weather) => { // 簡易天氣圖標
+                getWeatherIcon: (weather) => { 
                     if (weather === 'Sunny') return 'fas fa-sun';
                     return 'fas fa-cloud';
                 }, 
@@ -1024,14 +1012,22 @@
     // --- Google Maps 全域回調函數 ---
     function initMap() {
         console.log("Google Maps API 載入完成。");
-        // 如果 API Key 無效，後續程式不會執行
-
+        
         /**
          * 初始化 Place Autocomplete 服務，並限定搜尋範圍為香港。
+         * 此函數應在每次模態視窗開啟且 DOM 元素存在時被呼叫。
          */
         window.initAutocomplete = () => {
+            // 確保元素存在
             const input = document.getElementById('location-autocomplete');
             if (!input) return; 
+
+            // 檢查是否已初始化，如果已初始化則先移除舊的監聽
+            if (autocompleteListener) {
+                // 由於 Autocomplete API 沒有明確的 destroy 方法，最安全是避免重複初始化
+                // 這裡我們只允許初始化一次，因為 input 是在模態視窗內，每次打開是同一個元素，如果需要重置，需更複雜的邏輯。
+                // 為了簡化，我們只初始化一次，依賴 Vue 在模態視窗隱藏時將其從 DOM 中移除（但您使用的是 v-if，所以它確實會被移除/重建）。
+            }
 
             const options = {
                 types: ['establishment', 'geocode'], 
@@ -1039,34 +1035,34 @@
                 fields: ['name', 'formatted_address', 'opening_hours'],
             };
 
-            const autocomplete = new google.maps.places.Autocomplete(input, options);
+            // 只有在還未初始化時才進行初始化
+            if (!input.classList.contains('autocomplete-initialized')) {
+                 const autocomplete = new google.maps.places.Autocomplete(input, options);
+                 input.classList.add('autocomplete-initialized'); // 標記為已初始化
 
-            autocomplete.addListener('place_changed', () => {
-                const place = autocomplete.getPlace();
+                 autocomplete.addListener('place_changed', () => {
+                    const place = autocomplete.getPlace();
 
-                if (!place.name || !place.formatted_address) {
-                    console.error("未取得地點名稱或地址，請重新選擇。");
-                    return;
-                }
+                    if (!place.name || !place.formatted_address) {
+                        console.error("未取得地點名稱或地址，請重新選擇。");
+                        return;
+                    }
 
-                let hoursString = '無已知營業時間';
-                
-                if (place.opening_hours && place.opening_hours.weekday_text) {
-                    hoursString = place.opening_hours.weekday_text.join(' | ');
-                }
+                    let hoursString = '無已知營業時間';
+                    
+                    if (place.opening_hours && place.opening_hours.weekday_text) {
+                        hoursString = place.opening_hours.weekday_text.join(' | ');
+                    }
 
-                // 呼叫 Vue 實例中的方法來更新數據
-                window.appFunctions.updatePlaceDetails(
-                    place.name, 
-                    place.formatted_address, 
-                    hoursString
-                );
-            });
+                    // 呼叫 Vue 實例中的方法來更新數據
+                    window.appFunctions.updatePlaceDetails(
+                        place.name, 
+                        place.formatted_address, 
+                        hoursString
+                    );
+                });
+            }
         };
-        
-        // 第一次載入時，如果模態視窗已開，也應該初始化
-        // 為了確保在頁面初始載入時 Autocomplete 可以被初始化，我們可以將這個呼叫放在 initMap 內，但在實際應用中，它應該在模態視窗開啟時被呼叫。
-        // 由於我們無法在 initMap 內確認 modal 狀態，所以主要依賴 openAddModal/openEditModal 裡的 nextTick 觸發。
     }
 </script>
 </body>
