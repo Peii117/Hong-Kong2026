@@ -274,7 +274,7 @@
                     <p class="font-bold text-md">{{ hotel.name }}</p>
                     <p class="text-sm text-gray-600">日期: {{ hotel.dates }}</p>
                     <p class="text-sm text-gray-600">地址: {{ hotel.address }}</p>
-                    <a :href="hotel.mapLink" target="_blank" class="text-xs text-deep-red hover:underline"><i class="fas fa-route mr-1"></i>導航至飯店</a>
+                    <button @click="openGoogleMaps(hotel.address)" class="text-xs text-deep-red hover:underline block mt-1"><i class="fas fa-route mr-1"></i>導航至飯店</button>
                 </div>
                 <p class="text-xs text-gray-400 mt-2">（此資訊需手動修改程式碼）</p>
             </div>
@@ -975,8 +975,9 @@
                 return 'fas fa-bus-alt';
             };
 
+            // 💥 CRITICAL FIX: 修正拼寫錯誤，使用標準的 Google Maps 搜尋 URL 格式
             const openGoogleMaps = (location) => {
-                const query = location; // 移除您在程式碼中添加的 '香港,'，直接使用 location
+                const query = location;
                 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                 window.open(mapUrl, '_blank');
             };
