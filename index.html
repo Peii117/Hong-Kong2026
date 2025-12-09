@@ -83,7 +83,7 @@
         <div class="h-[250px] overflow-hidden relative bg-extension">
             <img src="Gemini_Generated_Image_y689rxy689rxy689.jpg" 
                  alt="港式復古橫幅圖片" 
-                 class="w-full h-full object-contain mx-auto">
+                 class="w-full h-full object-cover mx-auto absolute top-[-10px]">
         </div>
         
         <div class="h-8 bg-white z-10"></div> 
@@ -166,10 +166,14 @@
                             <div v-for="(item, index) in day.items" :key="item.id" 
                                  :class="{'cursor-pointer hover:shadow-lg transition duration-200': isEditMode, 'opacity-70': item.category === '交通'}"
                                  @click="isEditMode && openEditModal(item, day.date)"
+                                 
                                  :draggable="isEditMode && item.category !== '航班' && item.category !== '住宿'" 
-                                 @dragstart="isEditMode && item.category !== '航班' && item.category !== '住宿' && handleDragStart(index, day.date)"
-                                 @drop="isEditMode && item.category !== '航班' && item.category !== '住宿' && handleDrop(index, day.date)"
-                                 @dragover.prevent
+                                 @dragstart="handleDragStart($event, index, day.date)"
+                                 @dragend="handleDragEnd"
+                                 @drop="handleDrop($event, index, day.date)"
+                                 @dragover.prevent="handleDragOver($event, index, day.date)"
+                                 @dragleave="handleDragLeave"
+
                                  class="bg-white p-4 rounded-xl shadow-lg border-l-4"
                                  :style="{'border-left-color': item.category === '航班' ? '#9CA3AF' : item.category === '住宿' ? '#4169E1' : '#D93025'}">
                                 
@@ -281,42 +285,6 @@
             
         </section>
         
-        <section v-else-if="activeTab === 'expense'" key="expense" class="p-4">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">花費記錄</h2>
-            
-            <div class="bg-royal-blue text-white p-4 rounded-xl mb-4 shadow-lg text-center">
-                <p class="text-sm font-semibold">總花費 (TWD)</p>
-                <p class="text-4xl font-bold">{{ totalExpenseTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</p>
-            </div>
-
-            <button v-if="isEditMode" @click="openAddItemModal('expense')" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
-                <i class="fas fa-plus mr-1"></i> 新增開銷
-            </button>
-
-            <div class="space-y-3">
-                <div v-for="(item, index) in expenses" :key="item.id" 
-                     @click="isEditMode && openAddItemModal('expense', item)"
-                     :class="{'cursor-pointer hover:shadow-md transition': isEditMode}"
-                     class="bg-white p-3 rounded-xl shadow-sm border-l-4"
-                     :style="{'border-left-color': item.paymentMethod === '現金' ? '#10B981' : '#3B82F6'}">
-                    <div class="flex justify-between items-center">
-                        <div class="flex-grow">
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ item.category }}</span>
-                            <p class="font-bold text-gray-800 mt-1">{{ item.name }}</p>
-                            <p class="text-xs text-gray-500">
-                                {{ item.date }} | {{ item.paymentMethod }}
-                                <span v-if="item.payer" class="ml-2 font-semibold text-deep-red">({{ item.payer }})</span>
-                            </p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xl font-bold text-deep-red">{{ item.amount.toLocaleString() }} {{ item.currency }}</p>
-                            <p class="text-xs text-gray-500">≈ {{ item.amountTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }} TWD</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <section v-else-if="activeTab === 'food'" key="food" class="p-4">
             <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">美食清單 (待開發)</h2>
             <div class="bg-yellow-50 p-4 rounded-xl text-yellow-800">
@@ -350,6 +318,42 @@
                         <p class="font-bold text-gray-800">{{ item.name }}</p>
                         <p class="text-xs font-semibold text-deep-red">{{ item.category }}</p>
                         <p v-if="item.notes" class="text-sm text-gray-500">備註: {{ item.notes }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section v-else-if="activeTab === 'expense'" key="expense" class="p-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-l-4 border-deep-red pl-2">花費記錄</h2>
+            
+            <div class="bg-royal-blue text-white p-4 rounded-xl mb-4 shadow-lg text-center">
+                <p class="text-sm font-semibold">總花費 (TWD)</p>
+                <p class="text-4xl font-bold">{{ totalExpenseTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }}</p>
+            </div>
+
+            <button v-if="isEditMode" @click="openAddItemModal('expense')" class="w-full bg-green-100 text-green-700 border border-green-300 p-3 rounded-xl mb-4 hover:bg-green-200 transition duration-200 font-semibold">
+                <i class="fas fa-plus mr-1"></i> 新增開銷
+            </button>
+
+            <div class="space-y-3">
+                <div v-for="(item, index) in expenses" :key="item.id" 
+                     @click="isEditMode && openAddItemModal('expense', item)"
+                     :class="{'cursor-pointer hover:shadow-md transition': isEditMode}"
+                     class="bg-white p-3 rounded-xl shadow-sm border-l-4"
+                     :style="{'border-left-color': item.paymentMethod === '現金' ? '#10B981' : '#3B82F6'}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ item.category }}</span>
+                            <p class="font-bold text-gray-800 mt-1">{{ item.name }}</p>
+                            <p class="text-xs text-gray-500">
+                                {{ item.date }} | {{ item.paymentMethod }}
+                                <span v-if="item.payer" class="ml-2 font-semibold text-deep-red">({{ item.payer }})</span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-deep-red">{{ item.amount.toLocaleString() }} {{ item.currency }}</p>
+                            <p class="text-xs text-gray-500">≈ {{ item.amountTWD.toLocaleString(undefined, { maximumFractionDigits: 0 }) }} TWD</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -548,11 +552,55 @@
     
     // 建立一個供 Google Maps 全域存取的物件
     window.appFunctions = {};
-    let autocompleteListener = null; 
 
+    // --- Google Maps 全域回調函數 ---
+    function initMap() {
+        console.log("Google Maps API 載入完成。");
+        
+        /**
+         * 初始化 Place Autocomplete 服務，並限定搜尋範圍為香港。
+         * 此函數應在每次模態視窗開啟且 DOM 元素存在時被呼叫。
+         */
+        window.initAutocomplete = () => {
+            const input = document.getElementById('location-autocomplete');
+            if (!input) return; 
+
+            if (!input.classList.contains('autocomplete-initialized')) {
+                 // 限制搜尋地區為香港 (HK)
+                 const options = {
+                    componentRestrictions: { country: "hk" },
+                    fields: ["name", "formatted_address", "opening_hours"],
+                 };
+                 const autocomplete = new google.maps.places.Autocomplete(input, options);
+                 input.classList.add('autocomplete-initialized'); // 標記為已初始化
+
+                 autocomplete.addListener('place_changed', () => {
+                    const place = autocomplete.getPlace();
+
+                    if (!place.name || !place.formatted_address) {
+                        console.error("未取得地點名稱或地址，請重新選擇。");
+                        return;
+                    }
+
+                    let hoursString = '無已知營業時間';
+                    
+                    if (place.opening_hours && place.opening_hours.weekday_text) {
+                        hoursString = place.opening_hours.weekday_text.join(' | ');
+                    }
+
+                    // 呼叫 Vue 實例中的方法來更新數據
+                    window.appFunctions.updatePlaceDetails(
+                        place.name, 
+                        place.formatted_address, 
+                        hoursString
+                    );
+                });
+            }
+        };
+    }
+    
     // --- 輔助函式：時間與持續時間處理 ---
 
-    // 1. 將 '1h30m' 或 '30m' 格式的字串轉換為總分鐘數 (integer)
     function parseDurationToMinutes(durationStr) {
         if (!durationStr || typeof durationStr !== 'string') return 0;
         const hourMatch = durationStr.match(/(\d+)h/i);
@@ -563,12 +611,10 @@
         return totalMinutes;
     }
 
-    // 2. 將分鐘數加到 'HH:MM' 格式的時間字串
     function addMinutesToTime(timeStr, minutesToAdd) {
         if (!timeStr) return '';
         const [hours, minutes] = timeStr.split(':').map(Number);
         
-        // 使用 Date 物件進行時間加法，自動處理小時進位
         const tempDate = new Date(2000, 0, 1, hours, minutes);
         tempDate.setMinutes(tempDate.getMinutes() + minutesToAdd);
 
@@ -578,7 +624,6 @@
         return `${newHours}:${newMinutes}`;
     }
 
-    // 3. 檢查時間格式是否正確 (HH:MM)
     function isValidTimeFormat(timeStr) {
         if (!timeStr) return false;
         return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
@@ -691,13 +736,15 @@
             const currentItem = ref(null);
             const currentItemDate = ref('');
             const isPlaceSelected = ref(false);
-            const dragStartIndex = ref(-1); // 初始化拖曳索引
+            // ⭐ 拖曳相關狀態
+            const dragStartIndex = ref(-1); 
+            const draggingDate = ref('');
 
             // 匯率模擬
             const exchangeRate = 4.02; 
             const foreignAmount = ref(100); 
 
-            // --- 預設數據 (保持不變) ---
+            // --- 預設數據 ---
             const defaultItinerary = [
                 {
                     date: '2026/3/6', dayOfWeek: 'FRI',
@@ -749,16 +796,15 @@
                 }
             ];
 
-            // 修正選單順序
+            // ⭐ 選單順序已修正: 花費移到最後
             const menus = [
                 { tab: 'itinerary', name: '行程表', icon: 'fas fa-list-check' },
                 { tab: 'info', name: '旅行資訊', icon: 'fas fa-info-circle' },
-                { tab: 'expense', name: '花費記錄', icon: 'fas fa-hand-holding-dollar' },
                 { tab: 'food', name: '美食清單', icon: 'fas fa-utensils' },
                 { tab: 'shopping', name: '購物清單', icon: 'fas fa-shopping-bag' },
+                { tab: 'expense', name: '花費記錄', icon: 'fas fa-hand-holding-dollar' },
             ];
             
-            // 付款人選項
             const payers = ['沛晴', '芳晨', '玟妤'];
 
 
@@ -771,7 +817,6 @@
 
 
             // --- Life Cycle/Initialization ---
-            // 在數據載入後，確保所有行程時間都計算正確
             itineraryData.value.forEach(day => computeDayTimes(day));
             
             // --- Computed 屬性 (計算屬性) ---
@@ -801,7 +846,6 @@
 
             // --- CRUD 模態視窗邏輯 ---
             
-            // 開啟新增行程模態視窗
             const openAddModal = (date) => {
                 isEditModalMode.value = false;
                 modalType.value = 'itinerary';
@@ -824,13 +868,11 @@
                 isPlaceSelected.value = false;
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
-                // 必須在 nextTick 中調用 Autocomplete，確保 input 元素存在
                 nextTick(() => {
                     if (window.initAutocomplete) window.initAutocomplete();
                 });
             };
 
-            // 開啟編輯行程模態視窗
             const openEditModal = (item, date) => {
                 if (item.category === '航班' || item.category === '住宿') {
                      if (!item.duration) item.duration = '1h'; 
@@ -848,7 +890,6 @@
                 });
             };
 
-            // 開啟新增/編輯購物/花費模態視窗
             const openAddItemModal = (type, item = null) => {
                 modalType.value = type;
                 isEditModalMode.value = !!item; 
@@ -859,13 +900,11 @@
                     currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '伴手禮', notes: '' };
                 } else if (type === 'expense') {
                     modalTitle.value = isEditModalMode.value ? `編輯花費: ${item.name}` : '新增花費記錄';
-                    // 確保日期是有效的預設值，且 payer 預設為空 (請選擇)
                     currentItem.value = item ? JSON.parse(JSON.stringify(item)) : { id: Date.now(), name: '', category: '飲食', date: new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).replace(/\//g, '/'), amount: 0, currency: 'HKD', paymentMethod: '現金', payer: '', amountTWD: 0 };
                 }
                 isModalOpen.value = true;
             };
 
-            // 儲存項目
             const saveItem = () => {
                 if (modalType.value === 'itinerary') {
                     const dayIndex = itineraryData.value.findIndex(d => d.date === currentItemDate.value);
@@ -920,7 +959,6 @@
                 closeModal();
             };
             
-            // 刪除項目
             const deleteItem = () => {
                 if (!currentItem.value) return;
 
@@ -928,7 +966,7 @@
                     const day = itineraryData.value.find(d => d.date === currentItemDate.value);
                     if (day) {
                         day.items = day.items.filter(i => i.id !== currentItem.value.id);
-                        computeDayTimes(day); // 重新計算時間
+                        computeDayTimes(day); 
                         saveData('itinerary', itineraryData.value);
                     }
                 } else if (modalType.value === 'shopping') {
@@ -942,18 +980,50 @@
             };
 
 
-            // --- 拖曳/排序邏輯 ---
+            // --- ⭐ 修正後的拖曳/排序邏輯 ---
 
-            const handleDragStart = (index, date) => {
+            const handleDragStart = (event, index, date) => {
+                const day = itineraryData.value.find(d => d.date === date);
+                if (!day) return;
+                const item = day.items[index];
+                
+                // 檢查是否為不可拖曳的類別 (航班或住宿)
+                if (item.category === '航班' || item.category === '住宿') {
+                     event.preventDefault(); // 阻止拖曳
+                     return;
+                }
+                
                 dragStartIndex.value = index;
-                currentItemDate.value = date;
+                draggingDate.value = date;
+                
+                event.dataTransfer.setData('text/plain', JSON.stringify({ index, date }));
+                event.currentTarget.classList.add('opacity-40');
             };
 
-            const handleDrop = (targetIndex, date) => {
-                const day = itineraryData.value.find(d => d.date === date);
-                if (!day || dragStartIndex.value === -1 || currentItemDate.value !== date) {
-                    dragStartIndex.value = -1;
+            const handleDragEnd = (event) => {
+                event.currentTarget.classList.remove('opacity-40');
+                dragStartIndex.value = -1;
+                draggingDate.value = '';
+            };
+
+            const handleDrop = (event, targetIndex, date) => {
+                event.preventDefault(); 
+                
+                event.currentTarget.classList.remove('border-b-4', 'border-dashed', 'border-deep-red');
+
+                if (draggingDate.value !== date) {
                     return;
+                }
+
+                if (dragStartIndex.value === -1) return;
+
+                const day = itineraryData.value.find(d => d.date === date);
+                if (!day) return;
+
+                // 檢查目標項目是否為不可被替代的項目 (航班或住宿)
+                const targetItem = day.items[targetIndex];
+                if (targetItem.category === '航班' || targetItem.category === '住宿') {
+                     return; 
                 }
 
                 const draggedItem = day.items.splice(dragStartIndex.value, 1)[0];
@@ -963,6 +1033,19 @@
                 saveData('itinerary', itineraryData.value);
 
                 dragStartIndex.value = -1;
+            };
+
+            const handleDragOver = (event, targetIndex, date) => {
+                event.preventDefault(); 
+                
+                if (draggingDate.value !== date) return;
+                
+                // 只有在拖曳的日期和目標日期相符時才顯示視覺回饋
+                event.currentTarget.classList.add('border-b-4', 'border-dashed', 'border-deep-red');
+            };
+
+            const handleDragLeave = (event) => {
+                 event.currentTarget.classList.remove('border-b-4', 'border-dashed', 'border-deep-red');
             };
 
             // --- 樣式/工具函式 ---
@@ -987,12 +1070,10 @@
 
             const openGoogleMaps = (location) => {
                 const query = location;
-                // 修正後的連結格式
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query={encodeURIComponent(query)}`;
                 window.open(mapUrl, '_blank');
             };
             
-            // 關閉模態視窗
             const closeModal = () => { 
                 isModalOpen.value = false; 
                 currentItem.value = null; 
@@ -1015,53 +1096,16 @@
                     return 'fas fa-cloud';
                 }, 
                 openGoogleMaps, openAddModal, openEditModal, openAddItemModal,
-                closeModal, deleteItem, saveItem, handleDrop, handleDragStart,
+                closeModal, deleteItem, saveItem, 
+                
+                handleDragStart, 
+                handleDragEnd, 
+                handleDrop, 
+                handleDragOver, 
+                handleDragLeave, 
             }
         }
     }).mount('#app')
-
-    // --- Google Maps 全域回調函數 ---
-    function initMap() {
-        console.log("Google Maps API 載入完成。");
-        
-        /**
-         * 初始化 Place Autocomplete 服務，並限定搜尋範圍為香港。
-         * 此函數應在每次模態視窗開啟且 DOM 元素存在時被呼叫。
-         */
-        window.initAutocomplete = () => {
-            // 確保元素存在
-            const input = document.getElementById('location-autocomplete');
-            if (!input) return; 
-
-            // 只有在還未初始化時才進行初始化
-            if (!input.classList.contains('autocomplete-initialized')) {
-                 const autocomplete = new google.maps.places.Autocomplete(input, options);
-                 input.classList.add('autocomplete-initialized'); // 標記為已初始化
-
-                 autocomplete.addListener('place_changed', () => {
-                    const place = autocomplete.getPlace();
-
-                    if (!place.name || !place.formatted_address) {
-                        console.error("未取得地點名稱或地址，請重新選擇。");
-                        return;
-                    }
-
-                    let hoursString = '無已知營業時間';
-                    
-                    if (place.opening_hours && place.opening_hours.weekday_text) {
-                        hoursString = place.opening_hours.weekday_text.join(' | ');
-                    }
-
-                    // 呼叫 Vue 實例中的方法來更新數據
-                    window.appFunctions.updatePlaceDetails(
-                        place.name, 
-                        place.formatted_address, 
-                        hoursString
-                    );
-                });
-            }
-        };
-    }
 </script>
 </body>
 </html>
