@@ -687,7 +687,7 @@
     // --- Vue App Setup ---
     createApp({
         setup() {
-            // Vue 3 Composition API 的 ref, computed, watch
+            // Vue 3 Composition API 的 ref, computed, watch, nextTick
             const { ref, computed, watch, nextTick } = Vue;
 
             // 讀取 UI 狀態 (優先讀取 LocalStorage，如果沒有才用 Firebase 預設值)
@@ -904,12 +904,11 @@
                 return 'fas fa-bus-alt';
             };
             
-            // 點擊導航按鈕時的函式 (已修改為直接導航)
+            // 【已修正】點擊導航按鈕時的函式 (直接跳轉 Google Map 導航)
             const openGoogleMaps = (location) => {
-                // 使用 Google Maps API URL 來啟動導航
-                // destination=${encodeURIComponent(location)}: 設定目的地
-                // travelmode=driving: 建議使用開車模式
-                const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}&travelmode=driving`;
+                const encodedLocation = encodeURIComponent(location);
+                // 使用 Google Maps Directions API URL 結構
+                const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedLocation}&travelmode=driving`;
                 window.open(mapUrl, '_blank');
             };
 
