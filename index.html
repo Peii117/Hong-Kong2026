@@ -904,11 +904,11 @@
                 return 'fas fa-bus-alt';
             };
             
-            // 【已修正】點擊導航按鈕時的函式 (直接跳轉 Google Map 導航)
+            // 【最終修正】點擊導航按鈕時的函式 (已修正語法錯誤及使用標準 URL)
             const openGoogleMaps = (location) => {
                 const encodedLocation = encodeURIComponent(location);
-                // 使用 Google Maps Directions API URL 結構
-                const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedLocation}&travelmode=driving`;
+                // 使用標準 Google Maps 查詢 URL 格式：https://maps.google.com/?q=地點
+                const mapUrl = `https://maps.google.com/?q=${encodedLocation}&travelmode=driving`;
                 window.open(mapUrl, '_blank');
             };
 
@@ -934,6 +934,7 @@
             // 啟用 Google Maps Autocomplete
             const initAutocomplete = () => {
                 const input = document.getElementById('location-autocomplete');
+                // 檢查 Google Maps API 是否載入完成
                 if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places || input.classList.contains('autocomplete-initialized')) return;
 
                 const options = {
@@ -972,7 +973,8 @@
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
                 nextTick(() => { 
-                    if (window.initAutocomplete) initAutocomplete();
+                    // 在 DOM 更新後嘗試初始化地點自動完成
+                    if (document.getElementById('location-autocomplete')) initAutocomplete();
                 });
             };
 
@@ -990,7 +992,8 @@
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
                 nextTick(() => { 
-                    if (window.initAutocomplete) initAutocomplete();
+                    // 在 DOM 更新後嘗試初始化地點自動完成
+                    if (document.getElementById('location-autocomplete')) initAutocomplete();
                 });
             };
             
