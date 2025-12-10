@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
     
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
@@ -394,10 +393,7 @@
                             <label class="block text-sm font-semibold mb-1">名稱/標題</label>
                             <input type="text" v-model="currentItem.name" 
                                    required 
-                                   class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue" 
-                                   :readonly="currentItem.category !== '交通' && isPlaceSelected">
-                            <p v-if="currentItem.category !== '交通' && isPlaceSelected" 
-                               class="text-xs text-gray-500 mt-1">名稱已由 Google 地圖鎖定。如需更改，請重新選取地點。</p>
+                                   class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue">
                         </div>
                         
                         <div>
@@ -410,10 +406,11 @@
                         </div>
 
                         <div v-if="currentItem.category !== '交通'">
-                            <label class="block text-sm font-semibold mb-1">地點/地址 (開始輸入會自動搜尋香港地點)</label>
+                            <label class="block text-sm font-semibold mb-1">地點/地址 (請手動輸入精確地址或地點名稱)</label>
                             <input type="text" id="location-autocomplete" v-model="currentItem.location" 
                                    placeholder="例如: 迪士尼樂園" 
                                    class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue">
+                            <p class="text-xs text-gray-500 mt-1">注意：此版本無 Google 自動建議功能。</p>
                         </div>
                         
                         <div v-if="currentItem.category !== '交通' && currentItem.category !== '住宿' && currentItem.category !== '航班'">
@@ -462,7 +459,7 @@
                                        class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold mb-1">營業時間資訊 (Google Maps 自動填入/手動修改)</label>
+                                <label class="block text-sm font-semibold mb-1">營業時間資訊/地址</label>
                                 <textarea v-model="currentItem.hoursDisplay" rows="2" 
                                           class="w-full p-2 border rounded-md focus:ring-royal-blue focus:border-royal-blue"></textarea>
                                 <p class="text-xs text-gray-500 mt-1">此欄位僅供參考，不影響排程計算。</p>
@@ -594,6 +591,7 @@
     const { createApp, ref, computed, watch, nextTick } = Vue;
 
     // --- Firebase Setup (請替換為您的配置) ---
+    // ⚠️ 這組金鑰是必須的，用於保存和同步行程資料 ⚠️
     const firebaseConfig = {
         apiKey: "YOUR_FIREBASE_API_KEY",
         authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
@@ -722,8 +720,8 @@
             const modalType = ref('');
             const currentItem = ref(null);
             const currentItemDate = ref('');
-            const isPlaceSelected = ref(false); // Google 地點是否選取
-
+            // ⚠️ 移除 isPlaceSelected，因為不再使用 Google Maps Autocomplete 
+            
             // 拖曳相關狀態
             const dragStartIndex = ref(-1);
             const draggingDate = ref('');
@@ -904,11 +902,11 @@
                 return 'fas fa-bus-alt';
             };
             
-            // 【最終修正】點擊導航按鈕時的函式 (已修正語法錯誤及使用標準 URL)
+            // 點擊導航按鈕時的函式 (此功能不需 API Key)
             const openGoogleMaps = (location) => {
                 const encodedLocation = encodeURIComponent(location);
-                // 使用標準 Google Maps 查詢 URL 格式：https://maps.google.com/?q=地點
-                const mapUrl = `https://maps.google.com/?q=${encodedLocation}&travelmode=driving`;
+                // 使用標準 Google Maps 查詢 URL 格式
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodedLocation}`;
                 window.open(mapUrl, '_blank');
             };
 
@@ -918,48 +916,7 @@
                 showDeleteConfirm.value = false; 
             };
 
-            // --- 模態視窗操作邏輯 ---
-            // 註冊 Google Maps Autocomplete 的回調函數
-            if (typeof window !== 'undefined') {
-                window.appFunctions = {
-                    updatePlaceDetails: (name, address, hours) => {
-                        currentItem.value.name = name;
-                        currentItem.value.location = address;
-                        currentItem.value.hoursDisplay = hours;
-                        isPlaceSelected.value = true;
-                    }
-                };
-            }
-            
-            // 啟用 Google Maps Autocomplete
-            const initAutocomplete = () => {
-                const input = document.getElementById('location-autocomplete');
-                // 檢查 Google Maps API 是否載入完成
-                if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places || input.classList.contains('autocomplete-initialized')) return;
-
-                const options = {
-                    componentRestrictions: { country: "hk" }, // 限制搜尋香港地點
-                    fields: ["name", "formatted_address", "opening_hours"],
-                };
-                const autocomplete = new google.maps.places.Autocomplete(input, options);
-                input.classList.add('autocomplete-initialized');
-
-                autocomplete.addListener('place_changed', () => {
-                    const place = autocomplete.getPlace();
-                    if (!place.name || !place.formatted_address) return;
-                    
-                    let hoursString = '無已知營業時間';
-                    if (place.opening_hours && place.opening_hours.weekday_text) {
-                        hoursString = place.opening_hours.weekday_text.join(' | ');
-                    }
-                    
-                    window.appFunctions.updatePlaceDetails(
-                        place.name, 
-                        place.formatted_address, 
-                        hoursString
-                    );
-                });
-            };
+            // --- 模態視窗操作邏輯 (已移除 Google Autocomplete 相關程式碼) ---
 
             const openAddModal = (date) => {
                 isEditModalMode.value = false;
@@ -969,13 +926,9 @@
                     id: Date.now(), name: '', category: '景點', startTime: '', duration: '1h0m', endTime: '', hoursDisplay: '', ticket: '', notes: '', location: '', transport: '大眾運輸', transportDuration: '30m', ticket: ''
                 };
                 currentItemDate.value = date;
-                isPlaceSelected.value = false;
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
-                nextTick(() => { 
-                    // 在 DOM 更新後嘗試初始化地點自動完成
-                    if (document.getElementById('location-autocomplete')) initAutocomplete();
-                });
+                // ⚠️ 不再呼叫 initAutocomplete
             };
 
             const openEditModal = (item, date) => {
@@ -988,13 +941,9 @@
                 modalTitle.value = `編輯: ${item.name}`;
                 currentItem.value = JSON.parse(JSON.stringify(item));
                 currentItemDate.value = date;
-                isPlaceSelected.value = false;
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
-                nextTick(() => { 
-                    // 在 DOM 更新後嘗試初始化地點自動完成
-                    if (document.getElementById('location-autocomplete')) initAutocomplete();
-                });
+                // ⚠️ 不再呼叫 initAutocomplete
             };
             
             const openAddItemModal = (type, item = null) => {
@@ -1159,7 +1108,7 @@
                 itineraryData, flightInfo, accommodationInfo, shoppingList, expenses, 
                 foreignAmount, exchangeRate, payers,
                 isModalOpen, isEditModalMode, showDeleteConfirm, 
-                modalTitle, modalType, currentItem, isPlaceSelected, currentItemDate,
+                modalTitle, modalType, currentItem, currentItemDate,
                 filteredShoppingList, totalExpenseTWD,
                 
                 // 修正 toggleEditMode, setActiveTab 確保同步到 Firebase/LocalStorage
