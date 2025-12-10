@@ -591,7 +591,7 @@
     const { createApp, ref, computed, watch, nextTick } = Vue;
 
     // --- Firebase Setup (請替換為您的配置) ---
-    // ⚠️ 這組金鑰是必須的，用於保存和同步行程資料 ⚠️
+    // ⚠️ 這是程式碼能正常運行的關鍵！請務必用您在 Firebase Project 取得的金鑰替換以下 YOUR_FIREBASE_... 
     const firebaseConfig = {
         apiKey: "YOUR_FIREBASE_API_KEY",
         authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
@@ -604,7 +604,12 @@
 
     // 檢查 Firebase 是否已初始化，如果沒有則初始化
     if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+            console.error("Firebase 初始化失敗，請檢查您的 firebaseConfig 是否已正確替換金鑰:", error);
+            alert("應用程式啟動失敗：Firebase 設定錯誤。請檢查程式碼中的 YOUR_FIREBASE_... 是否已替換。");
+        }
     }
     // 儲存資料的根路徑
     const FIREBASE_PATH = 'hongkongTripV5'; 
@@ -720,7 +725,6 @@
             const modalType = ref('');
             const currentItem = ref(null);
             const currentItemDate = ref('');
-            // ⚠️ isPlaceSelected 已移除
             
             // 拖曳相關狀態
             const dragStartIndex = ref(-1);
@@ -788,35 +792,60 @@
             };
 
             // --- Firebase 資料讀取與監聽 ---
-            const dbRef = firebase.database().ref(FIREBASE_PATH);
-
-            dbRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    // 更新核心資料
-                    itineraryData.value = data.itinerary || defaultItinerary;
-                    flightInfo.value = data.flightInfo || initialData.flightInfo;
-                    accommodationInfo.value = data.accommodationInfo || initialData.accommodationInfo;
-                    shoppingList.value = data.shopping || initialData.shopping;
-                    expenses.value = data.expenses || initialData.expenses;
-                    
-                    // 重新計算時間連動 (確保行程時間正確)
-                    itineraryData.value.forEach(day => computeDayTimes(day));
-
-                    // 確保 UI 狀態同步 (從 Firebase 讀取)
-                    if(data.uiState) {
-                        isEditMode.value = data.uiState.isEditMode || false;
-                        activeTab.value = data.uiState.activeTab || 'itinerary';
-                        activeDate.value = data.uiState.activeDate || '2026/3/6';
-                    }
-                } else {
-                    // 如果 Firebase 根目錄是空的，則上傳預設數據
-                    saveAllData(initialData);
+            let dbRef = null;
+            try {
+                // 只有在 Firebase 初始化成功時才建立參考
+                if (firebase.apps.length) {
+                     dbRef = firebase.database().ref(FIREBASE_PATH);
                 }
-            });
+            } catch (error) {
+                // 如果初始化失敗，dbRef 會是 null
+                console.warn("Firebase 資料庫參考建立失敗，應用程式將使用預設資料。");
+            }
+            
+            if (dbRef) {
+                dbRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        // 更新核心資料
+                        itineraryData.value = data.itinerary || defaultItinerary;
+                        flightInfo.value = data.flightInfo || initialData.flightInfo;
+                        accommodationInfo.value = data.accommodationInfo || initialData.accommodationInfo;
+                        shoppingList.value = data.shopping || initialData.shopping;
+                        expenses.value = data.expenses || initialData.expenses;
+                        
+                        // 重新計算時間連動 (確保行程時間正確)
+                        itineraryData.value.forEach(day => computeDayTimes(day));
+
+                        // 確保 UI 狀態同步 (從 Firebase 讀取)
+                        if(data.uiState) {
+                            isEditMode.value = data.uiState.isEditMode || false;
+                            activeTab.value = data.uiState.activeTab || 'itinerary';
+                            activeDate.value = data.uiState.activeDate || '2026/3/6';
+                        }
+                    } else {
+                        // 如果 Firebase 根目錄是空的，則上傳預設數據
+                        saveAllData(initialData);
+                    }
+                });
+            } else {
+                 // 如果 Firebase 初始化失敗，使用預設的 Local 數據
+                itineraryData.value = defaultItinerary;
+                flightInfo.value = initialData.flightInfo;
+                accommodationInfo.value = initialData.accommodationInfo;
+                shoppingList.value = initialData.shopping;
+                expenses.value = initialData.expenses;
+                itineraryData.value.forEach(day => computeDayTimes(day));
+                console.warn("Firebase 無法連線，應用程式將使用本地預設資料且無法同步。");
+            }
+
 
             // --- 輔助函數：將所有資料寫回 Firebase ---
             const saveAllData = (dataToSave) => {
+                if (!dbRef) {
+                    console.error("無法儲存：Firebase 連線失敗。");
+                    return;
+                }
                 const finalData = { 
                     ...dataToSave, 
                     uiState: {
@@ -825,7 +854,7 @@
                         activeDate: activeDate.value,
                     }
                 };
-                firebase.database().ref(FIREBASE_PATH).set(finalData).catch(error => {
+                dbRef.set(finalData).catch(error => {
                     console.error("Firebase 寫入失敗:", error);
                     alert("資料同步到雲端失敗，請檢查網路或 Firebase 設定。");
                 });
@@ -846,15 +875,15 @@
             // 監聽 UI 狀態變化並同步到 LocalStorage (用於單獨使用者狀態) 和 Firebase
             watch(isEditMode, (newVal) => { 
                 localStorage.setItem('isEditMode', JSON.stringify(newVal));
-                firebase.database().ref(`${FIREBASE_PATH}/uiState/isEditMode`).set(newVal); 
+                if(dbRef) dbRef.child('uiState/isEditMode').set(newVal); 
             });
             watch(activeTab, (newVal) => { 
                 localStorage.setItem('activeTab', JSON.stringify(newVal));
-                firebase.database().ref(`${FIREBASE_PATH}/uiState/activeTab`).set(newVal); 
+                if(dbRef) dbRef.child('uiState/activeTab').set(newVal); 
             });
             watch(activeDate, (newVal) => { 
                 localStorage.setItem('activeDate', JSON.stringify(newVal));
-                firebase.database().ref(`${FIREBASE_PATH}/uiState/activeDate`).set(newVal); 
+                if(dbRef) dbRef.child('uiState/activeDate').set(newVal); 
             });
             watch(expenses, () => {
                 expenses.value.forEach(item => {
@@ -902,11 +931,10 @@
                 return 'fas fa-bus-alt';
             };
             
-            // 點擊導航按鈕時的函式 (此功能不需 API Key，已保留)
+            // 點擊導航按鈕時的函式 (已修正，使用標準 Google Maps 查詢連結)
             const openGoogleMaps = (location) => {
                 const encodedLocation = encodeURIComponent(location);
-                // 使用標準 Google Maps 查詢 URL 格式
-                // 這是保留 Google Maps 導航功能的關鍵
+                // 使用標準 Google Maps 查詢 URL 格式，讓地圖 App 或網頁開啟並搜尋地點
                 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
                 window.open(mapUrl, '_blank');
             };
@@ -917,7 +945,7 @@
                 showDeleteConfirm.value = false; 
             };
 
-            // --- 模態視窗操作邏輯 ---
+            // --- 模態視窗操作邏輯 (略) ---
 
             const openAddModal = (date) => {
                 isEditModalMode.value = false;
@@ -929,7 +957,6 @@
                 currentItemDate.value = date;
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
-                // ⚠️ 不再呼叫 initAutocomplete
             };
 
             const openEditModal = (item, date) => {
@@ -944,7 +971,6 @@
                 currentItemDate.value = date;
                 showDeleteConfirm.value = false;
                 isModalOpen.value = true;
-                // ⚠️ 不再呼叫 initAutocomplete
             };
             
             const openAddItemModal = (type, item = null) => {
@@ -1035,7 +1061,7 @@
                 closeModal();
             };
 
-            // --- 拖曳/排序邏輯 ---
+            // --- 拖曳/排序邏輯 (略) ---
             const handleDragStart = (event, index, date) => {
                 const day = itineraryData.value.find(d => d.date === date);
                 if (!day) return;
