@@ -720,7 +720,7 @@
             const modalType = ref('');
             const currentItem = ref(null);
             const currentItemDate = ref('');
-            // ⚠️ 移除 isPlaceSelected，因為不再使用 Google Maps Autocomplete 
+            // ⚠️ isPlaceSelected 已移除
             
             // 拖曳相關狀態
             const dragStartIndex = ref(-1);
@@ -902,11 +902,12 @@
                 return 'fas fa-bus-alt';
             };
             
-            // 點擊導航按鈕時的函式 (此功能不需 API Key)
+            // 點擊導航按鈕時的函式 (此功能不需 API Key，已保留)
             const openGoogleMaps = (location) => {
                 const encodedLocation = encodeURIComponent(location);
                 // 使用標準 Google Maps 查詢 URL 格式
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodedLocation}`;
+                // 這是保留 Google Maps 導航功能的關鍵
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
                 window.open(mapUrl, '_blank');
             };
 
@@ -916,7 +917,7 @@
                 showDeleteConfirm.value = false; 
             };
 
-            // --- 模態視窗操作邏輯 (已移除 Google Autocomplete 相關程式碼) ---
+            // --- 模態視窗操作邏輯 ---
 
             const openAddModal = (date) => {
                 isEditModalMode.value = false;
