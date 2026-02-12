@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 智慧旅遊助手</title>
+    <title>香港之旅 - 智慧旅遊助手 (3/6-3/9)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -145,23 +145,6 @@
 
             <div class="space-y-4">
                 <div class="flex justify-between items-center px-2">
-                    <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-info-circle mr-2 text-royal-blue"></i>旅行筆記</h4>
-                    <button v-if="isEditMode" @click="openGeneralInfoModal" class="text-xs bg-royal-blue text-white px-3 py-1.5 rounded-full font-bold shadow-md">+ 新增</button>
-                </div>
-                <div v-if="generalInfoList.length > 0" class="grid grid-cols-1 gap-3">
-                    <div v-for="info in generalInfoList" :key="info.id" class="bg-white border border-gray-100 rounded-[2rem] p-5 shadow-sm relative">
-                        <div class="flex justify-between items-start">
-                            <h5 class="font-black text-gray-800 text-sm uppercase tracking-wider mb-2">{{ info.title }}</h5>
-                            <button v-if="isEditMode" @click="deleteItem('general', info.id)" class="text-red-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                        <p class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{{ info.content }}</p>
-                    </div>
-                </div>
-                <div v-else class="text-center py-6 bg-gray-50 rounded-[2rem] text-gray-300 text-xs font-bold border-2 border-dashed border-gray-100">暫無筆記 (如: 簽證, Sim卡, 網卡)</div>
-            </div>
-
-            <div class="space-y-4">
-                <div class="flex justify-between items-center px-2">
                     <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-plane-departure mr-2 text-royal-blue"></i>航班與住宿</h4>
                     <div v-if="isEditMode" class="flex space-x-2">
                         <button @click="showFlightModal = true" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full font-bold">+ 航班</button>
@@ -178,12 +161,29 @@
                     </div>
                 </div>
                 <div v-if="hotels.length > 0" class="space-y-2">
-                    <div v-for="h in hotels" :key="h.id" class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center">
-                        <div>
-                            <span class="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded mr-2">HOTEL</span>
-                            <span class="text-xs font-bold text-gray-700">{{ h.name }}</span>
+                    <div v-for="h in hotels" :key="h.id" class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-black text-gray-800">{{ h.name }}</span>
+                            <button v-if="isEditMode" @click="deleteItem('hotel', h.id)" class="text-red-300 text-xs"><i class="fas fa-times"></i></button>
                         </div>
-                        <button v-if="isEditMode" @click="deleteItem('hotel', h.id)" class="text-red-300 text-xs"><i class="fas fa-times"></i></button>
+                        <p class="text-[10px] text-gray-400 mb-1"><i class="far fa-calendar mr-1"></i>{{ h.checkIn }} - {{ h.checkOut }}</p>
+                        <p v-if="h.address" class="text-[10px] text-gray-500 bg-gray-50 p-2 rounded-lg"><i class="fas fa-map-marker-alt mr-1 text-royal-blue"></i>{{ h.address }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex justify-between items-center px-2">
+                    <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-info-circle mr-2 text-royal-blue"></i>旅行筆記</h4>
+                    <button v-if="isEditMode" @click="openGeneralInfoModal" class="text-xs bg-royal-blue text-white px-3 py-1.5 rounded-full font-bold shadow-md">+ 新增</button>
+                </div>
+                <div v-if="generalInfoList.length > 0" class="grid grid-cols-1 gap-3">
+                    <div v-for="info in generalInfoList" :key="info.id" class="bg-white border border-gray-100 rounded-[2rem] p-5 shadow-sm relative">
+                        <div class="flex justify-between items-start">
+                            <h5 class="font-black text-gray-800 text-sm uppercase tracking-wider mb-2">{{ info.title }}</h5>
+                            <button v-if="isEditMode" @click="deleteItem('general', info.id)" class="text-red-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <p class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{{ info.content }}</p>
                     </div>
                 </div>
             </div>
@@ -332,6 +332,7 @@
             <h2 class="text-xl font-black mb-6">新增住宿</h2>
             <div class="space-y-4">
                 <input v-model="newHotel.name" placeholder="飯店名稱" class="w-full border-b-2 border-gray-100 p-2.5 font-bold outline-none">
+                <input v-model="newHotel.address" placeholder="地址 / 出口資訊" class="w-full border-b-2 border-gray-100 p-2.5 text-sm outline-none">
                 <div class="grid grid-cols-2 gap-4">
                     <input v-model="newHotel.checkIn" type="date" class="border-b-2 border-gray-100 p-2.5 text-xs">
                     <input v-model="newHotel.checkOut" type="date" class="border-b-2 border-gray-100 p-2.5 text-xs">
@@ -391,18 +392,46 @@
         '住宿': { bg: 'bg-indigo-500 border-indigo-600', border: 'border-indigo-500', shadow: 'shadow-indigo-50' }
     };
 
-    // 預載資料
-    const defaultItinerary = [
-        { id: 1, dateId: 'd1', name: '太平山頂纜車', time: '10:00', durationHours: 2, durationMinutes: 30, category: '景點', notes: '記得帶八達通' },
-        { id: 2, dateId: 'd1', name: '中環摩天輪', time: '14:00', durationHours: 1, durationMinutes: 0, category: '景點', notes: '摩天輪下方有富豪雪糕車' },
-        { id: 3, dateId: 'd1', name: '維多利亞港', time: '19:00', durationHours: 1, durationMinutes: 0, category: '景點', notes: '幻彩詠香江' }
-    ];
-    const defaultFood = [
-        { id: 101, name: '澳洲牛奶公司', region: '佐敦', info: '必點炒蛋多士', notes: '排隊人潮多，建議早去' },
-        { id: 102, name: '甘牌燒鵝', region: '灣仔', info: '米其林一星', notes: '燒鵝必吃，外帶比較快' },
-        { id: 103, name: '九記牛腩', region: '中環', info: '清湯牛腩', notes: '只收現金' },
-        { id: 104, name: '蘭芳園', region: '中環', info: '絲襪奶茶始祖', notes: '必點豬扒包' }
-    ];
+    // 預載行程資料 (3/6 - 3/9)
+    const initData = {
+        dates: [
+            {id:'d1', fullDate:'2024-03-06'},
+            {id:'d2', fullDate:'2024-03-07'},
+            {id:'d3', fullDate:'2024-03-08'},
+            {id:'d4', fullDate:'2024-03-09'}
+        ],
+        itinerary: [
+            // Day 1
+            { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', notes: '搭計程車到飯店，車程約30min，約150港幣' },
+            { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '寄放行李，搭接駁車前往樂園 (15-20min)' },
+            { id: 103, dateId: 'd1', name: '迪士尼樂園', time: '13:00', durationHours: 9, durationMinutes: 0, category: '景點', notes: '盡情遊玩！結束後搭接駁車回飯店' },
+            
+            // Day 2
+            { id: 201, dateId: 'd2', name: '飯店 Check out', time: '09:30', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '前往地鐵迪士尼站' },
+            { id: 202, dateId: 'd2', name: '地鐵轉乘', time: '10:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '迪士尼->欣澳->中環->尖沙咀 (約45min)' },
+            { id: 203, dateId: 'd2', name: '金域假日酒店', time: '11:00', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '尖沙咀站N5出口最近(N1有電梯)，寄放行李' },
+            { id: 204, dateId: 'd2', name: 'City Walk', time: '12:00', durationHours: 3, durationMinutes: 0, category: '景點', notes: '旺角 / 油麻地 / 尖沙咀' },
+            { id: 205, dateId: 'd2', name: '飯店 Check in', time: '15:00', durationHours: 1, durationMinutes: 0, category: '住宿', notes: '休息' },
+            { id: 206, dateId: 'd2', name: '維多利亞港', time: '16:00', durationHours: 2, durationMinutes: 0, category: '景點', notes: '散步看夕陽' },
+            { id: 207, dateId: 'd2', name: 'City Walk (夜)', time: '19:00', durationHours: 4, durationMinutes: 0, category: '景點', notes: '晚餐與逛街，注意末班車回尖沙咀 00:54' },
+
+            // Day 3 (Empty placeholder or continue City Walk)
+            { id: 301, dateId: 'd3', name: '自由活動 / City Walk', time: '10:00', durationHours: 8, durationMinutes: 0, category: '景點', notes: '探索更多香港美食與景點' },
+
+            // Day 4
+            { id: 401, dateId: 'd4', name: '買蛋塔 (Bakehouse?)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', notes: '早起買蛋塔回台灣' },
+            { id: 402, dateId: 'd4', name: '前往機場', time: '11:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
+            { id: 403, dateId: 'd4', name: '機場 Check in', time: '12:00', durationHours: 2, durationMinutes: 0, category: '交通', notes: '準備登機' }
+        ],
+        flights: [
+            { id: 1, code: '去程', depCity: 'TPE (T1)', arrCity: 'HKG (T1)', depTime: '08:00', arrTime: '10:10' },
+            { id: 2, code: '回程', depCity: 'HKG (T1)', arrCity: 'TPE (T1)', depTime: '14:05', arrTime: '15:50' }
+        ],
+        hotels: [
+            { id: 1, name: '迪士尼好來塢酒店', checkIn: '2024-03-06', checkOut: '2024-03-07', address: '大嶼山 (寄放行李)' },
+            { id: 2, name: '金域假日酒店', checkIn: '2024-03-07', checkOut: '2024-03-09', address: '尖沙咀彌敦道50號 (N5出口)' }
+        ]
+    };
 
     createApp({
         setup() {
@@ -415,6 +444,217 @@
             const showHotelModal = ref(false);
             const showListModal = ref(false);
             const showGeneralInfoModal = ref(false);
+            const isNewItem = ref(true);
+            const selectedItem = ref(null);
+            const listType = ref('');
+
+            // 使用 v17 作為版本號，強制載入新資料
+            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v17') || '{"start":"2024-03-06","end":"2024-03-09"}'));
+            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v17') || JSON.stringify(initData.dates)));
+            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v17') || JSON.stringify(initData.itinerary)));
+            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v17') || JSON.stringify(initData.flights)));
+            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v17') || JSON.stringify(initData.hotels)));
+            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v17') || '[]'));
+            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v17') || '[]'));
+            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v17') || '[]'));
+
+            const activeDateId = ref(tripDates.value[0]?.id || 'd1');
+            const tempRange = ref({ ...tripRange.value });
+            
+            const weather = ref({ temp: '--', desc: '載入中...', humidity: '--', iconUrl: '' });
+            const exchangeRate = ref('--');
+
+            const newItem = ref({ name: '', time: '09:00', category: '景點', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
+            const newFlight = ref({ code: '', depCity: '', arrCity: '', depTime: '', arrTime: '' });
+            const newHotel = ref({ name: '', address: '', checkIn: '', checkOut: '' });
+            const newListEntry = ref({ id: '', name: '', region: '', info: '', notes: '', checked: false });
+            const newGeneralInfo = ref({ title: '', content: '' });
+
+            const menus = [
+                { tab: 'itinerary', name: '行程', icon: 'fas fa-map-marked' },
+                { tab: 'info', name: '資訊', icon: 'fas fa-info-circle' },
+                { tab: 'shopping', name: '購物', icon: 'fas fa-shopping-cart' },
+                { tab: 'food', name: '美食', icon: 'fas fa-heart' }
+            ];
+
+            const activeMenuName = computed(() => menus.find(m => m.tab === activeTab.value).name);
+            const currentDayNumber = computed(() => tripDates.value.findIndex(d => d.id === activeDateId.value) + 1);
+            const currentItinerary = computed(() => itineraryList.value.filter(i => i.dateId === activeDateId.value).sort((a,b) => a.time.localeCompare(b.time)));
+
+            const fetchWeather = async () => {
+                try {
+                    const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
+                    const data = await res.json();
+                    const tempData = data.temperature.data.find(t => t.place === '香港天文台') || data.temperature.data[0];
+                    const humData = data.humidity.data[0];
+                    const iconId = data.icon ? data.icon[0] : 50;
+                    weather.value = {
+                        temp: tempData.value,
+                        humidity: humData.value,
+                        desc: '香港實時天氣',
+                        iconUrl: 'https://www.hko.gov.hk/images/HKOWxIconOutline/pic' + iconId + '.png'
+                    };
+                } catch (e) {
+                    weather.value = { temp: 25, desc: 'API 暫停', humidity: 70, iconUrl: '' };
+                }
+            };
+
+            const fetchRate = async () => {
+                try {
+                    const res = await fetch('https://open.er-api.com/v6/latest/HKD');
+                    const data = await res.json();
+                    if(data && data.rates && data.rates.TWD) {
+                        exchangeRate.value = data.rates.TWD.toFixed(2);
+                    }
+                } catch (e) {
+                    exchangeRate.value = '4.00'; 
+                }
+            };
+
+            onMounted(() => {
+                fetchWeather();
+                fetchRate();
+            });
+
+            watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList], () => {
+                localStorage.setItem('hk_range_v17', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v17', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v17', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v17', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v17', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v17', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v17', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v17', JSON.stringify(generalInfoList.value));
+            }, { deep: true });
+
+            const applyDateRange = () => {
+                const s = new Date(tempRange.value.start), e = new Date(tempRange.value.end);
+                if (isNaN(s) || isNaN(e)) return alert('請選擇日期');
+                const days = Math.ceil((e - s) / 86400000) + 1;
+                if (days <= 0) return alert('日期錯誤');
+                const newDates = [];
+                let curr = new Date(tempRange.value.start);
+                for(let i=0; i<days; i++) {
+                    const dStr = curr.toISOString().split('T')[0];
+                    newDates.push({ id: 'd_' + dStr, fullDate: dStr });
+                    curr.setDate(curr.getDate() + 1);
+                }
+                tripRange.value = { ...tempRange.value };
+                tripDates.value = newDates;
+                activeDateId.value = newDates[0]?.id;
+                showRangeModal.value = false;
+            };
+
+            const openAddModal = () => {
+                isNewItem.value = true;
+                newItem.value = { id: Date.now(), name: '', time: '09:00', category: '景點', notes: '', dateId: activeDateId.value, durationHours: 1, durationMinutes: 0 };
+                showEditModal.value = true;
+            };
+
+            const openListModal = (type, item = null) => {
+                listType.value = type;
+                if (item) {
+                    isNewItem.value = false;
+                    newListEntry.value = { ...item };
+                } else {
+                    isNewItem.value = true;
+                    newListEntry.value = { id: Date.now(), name: '', region: '', info: '', notes: '', checked: false };
+                }
+                showListModal.value = true;
+            };
+
+            const openGeneralInfoModal = () => {
+                newGeneralInfo.value = { title: '', content: '' };
+                showGeneralInfoModal.value = true;
+            };
+
+            const handleItemClick = (item) => {
+                if (isEditMode.value) {
+                    if (activeTab.value === 'itinerary') {
+                        isNewItem.value = false;
+                        newItem.value = { ...item };
+                        showEditModal.value = true;
+                    } else if (activeTab.value === 'food') {
+                        openListModal('food', item);
+                    }
+                } else {
+                    selectedItem.value = item;
+                    showDetailModal.value = true;
+                }
+            };
+
+            const saveItem = () => {
+                if(!newItem.value.name) return;
+                if(isNewItem.value) itineraryList.value.push({...newItem.value});
+                else {
+                    const idx = itineraryList.value.findIndex(i => i.id === newItem.value.id);
+                    itineraryList.value[idx] = {...newItem.value};
+                }
+                showEditModal.value = false;
+            };
+
+            const saveListEntry = () => {
+                if (!newListEntry.value.name) return;
+                const targetList = listType.value === 'shopping' ? shoppingList : foodList;
+                if (isNewItem.value) targetList.value.push({ ...newListEntry.value, id: Date.now() });
+                else {
+                    const idx = targetList.value.findIndex(i => i.id === newListEntry.value.id);
+                    targetList.value[idx] = { ...newListEntry.value };
+                }
+                showListModal.value = false;
+            };
+
+            const saveFlight = () => {
+                if(!newFlight.value.code) return;
+                flights.value.push({ id: Date.now(), ...newFlight.value });
+                showFlightModal.value = false;
+            };
+
+            const saveHotel = () => {
+                if(!newHotel.value.name) return;
+                hotels.value.push({ id: Date.now(), ...newHotel.value });
+                showHotelModal.value = false;
+            };
+
+            const saveGeneralInfo = () => {
+                if(!newGeneralInfo.value.title) return;
+                generalInfoList.value.push({ id: Date.now(), ...newGeneralInfo.value });
+                showGeneralInfoModal.value = false;
+            };
+
+            const deleteItem = (type, id) => {
+                if(confirm('確定要刪除嗎？')) {
+                    if(type === 'itinerary') itineraryList.value = itineraryList.value.filter(i => i.id !== id);
+                    else if(type === 'flight') flights.value = flights.value.filter(f => f.id !== id);
+                    else if(type === 'hotel') hotels.value = hotels.value.filter(h => h.id !== id);
+                    else if(type === 'shopping') shoppingList.value = shoppingList.value.filter(s => s.id !== id);
+                    else if(type === 'food') foodList.value = foodList.value.filter(f => f.id !== id);
+                    else if(type === 'general') generalInfoList.value = generalInfoList.value.filter(g => g.id !== id);
+                }
+            };
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                return (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getDate().toString().padStart(2, '0');
+            };
+
+            const getStyles = (cat) => categoryConfig[cat] || categoryConfig['景點'];
+
+            return {
+                isEditMode, activeTab, menus, activeMenuName, tripRange, tripDates, activeDateId,
+                showRangeModal, showEditModal, showDetailModal, showFlightModal, showHotelModal, showListModal, showGeneralInfoModal,
+                tempRange, currentItinerary, currentDayNumber, isNewItem, newItem, selectedItem, categoryConfig,
+                weather, exchangeRate, flights, hotels, shoppingList, foodList, generalInfoList,
+                newFlight, newHotel, newListEntry, newGeneralInfo, listType,
+                formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, handleItemClick,
+                saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, deleteItem, getStyles
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
             const isNewItem = ref(true);
             const selectedItem = ref(null);
             const listType = ref('');
