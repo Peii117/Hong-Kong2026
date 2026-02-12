@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 行程助手 (MTR Color Edition)</title>
+    <title>香港之旅 - 3/6~3/8 行程助手 (Map Fixed)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -91,7 +91,7 @@
                     </li>
                 </ul>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.2</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.3 (Fixed)</div>
         </aside>
     </transition>
 
@@ -194,7 +194,7 @@
                                   class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider border shadow-sm uppercase">
                                 {{ item.category }}
                             </span>
-                            <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                            <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                                class="w-16 py-1 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg text-[10px] font-bold border border-gray-200 active:bg-gray-200 transition-colors">
                                 <i class="fas fa-map-marked-alt mr-1"></i>地圖
                             </a>
@@ -233,7 +233,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                        class="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100">
                         <i class="fas fa-location-arrow text-xs"></i>
                     </a>
@@ -264,7 +264,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                        class="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100 transition-colors">
                         <i class="fas fa-location-arrow"></i>
                     </a>
@@ -463,7 +463,7 @@
                 <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ selectedItem?.notes }}</p>
             </div>
             <div class="flex flex-col space-y-4">
-                <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
+                <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
                    class="block w-full py-4 bg-royal-blue text-white rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all">
                     <i class="fas fa-location-arrow mr-2"></i>開始地圖導航
                 </a>
@@ -489,18 +489,16 @@
 <script>
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
-    // 分類基礎樣式
     const categoryConfig = {
-        '景點': { bg: 'bg-blue-600 border-blue-700 text-white', border: 'border-blue-600', shadow: 'shadow-blue-50' },
-        '美食': { bg: 'bg-orange-500 border-orange-600 text-white', border: 'border-orange-500', shadow: 'shadow-orange-50' },
-        '交通': { bg: 'bg-emerald-500 border-emerald-600 text-white', border: 'border-emerald-500', shadow: 'shadow-emerald-50' },
-        '購物': { bg: 'bg-pink-500 border-pink-600 text-white', border: 'border-pink-500', shadow: 'shadow-pink-50' },
-        '住宿': { bg: 'bg-indigo-500 border-indigo-600 text-white', border: 'border-indigo-500', shadow: 'shadow-indigo-50' }
+        '景點': { bg: 'bg-blue-600 border-blue-700', border: 'border-blue-600', shadow: 'shadow-blue-50' },
+        '美食': { bg: 'bg-orange-500 border-orange-600', border: 'border-orange-500', shadow: 'shadow-orange-50' },
+        '交通': { bg: 'bg-emerald-500 border-emerald-600', border: 'border-emerald-500', shadow: 'shadow-emerald-50' },
+        '購物': { bg: 'bg-pink-500 border-pink-600', border: 'border-pink-500', shadow: 'shadow-pink-50' },
+        '住宿': { bg: 'bg-indigo-500 border-indigo-600', border: 'border-indigo-500', shadow: 'shadow-indigo-50' }
     };
 
-    // MTR & Region 顏色對照表
     const mtrColors = {
-        '旺角': { bg: 'bg-red-600 text-white', border: 'border-red-700', shadow: 'shadow-red-50' }, // 荃灣線紅
+        '旺角': { bg: 'bg-red-600 text-white', border: 'border-red-700', shadow: 'shadow-red-50' }, 
         '油麻地': { bg: 'bg-stone-400 text-white', border: 'border-stone-500', shadow: 'shadow-stone-50' }, 
         '佐敦': { bg: 'bg-emerald-400 text-white', border: 'border-emerald-500', shadow: 'shadow-emerald-50' },
         '尖沙咀': { bg: 'bg-yellow-500 text-black', border: 'border-yellow-600', shadow: 'shadow-yellow-50' },
@@ -522,7 +520,6 @@
             { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', region: '機場', notes: '搭計程車到飯店，車程約30min，約150港幣 (台幣約610)' },
             { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', region: '迪士尼', notes: '寄放行李，搭接駁車前往樂園 (步行為15-20min)' },
             { id: 103, dateId: 'd1', name: '迪士尼樂園', time: '13:00', durationHours: 9, durationMinutes: 0, category: '景點', region: '迪士尼', notes: '盡情遊玩！結束後搭接駁車回飯店' },
-            
             { id: 201, dateId: 'd2', name: '飯店 Check out', time: '09:30', durationHours: 0, durationMinutes: 30, category: '住宿', region: '迪士尼', notes: '前往地鐵迪士尼站 (10min)' },
             { id: 202, dateId: 'd2', name: '地鐵轉乘', time: '10:00', durationHours: 1, durationMinutes: 0, category: '交通', region: '', notes: '迪士尼->欣澳(10min)->中環(25min)->尖沙咀(10min)' },
             { id: 203, dateId: 'd2', name: '金域假日酒店', time: '11:00', durationHours: 0, durationMinutes: 30, category: '住宿', region: '尖沙咀', notes: '尖沙咀站 N5出口最近 / N1有電梯。從N1步行到酒店約2min。寄放行李。' },
@@ -530,7 +527,6 @@
             { id: 205, dateId: 'd2', name: '飯店 Check in', time: '15:00', durationHours: 1, durationMinutes: 0, category: '住宿', region: '尖沙咀', notes: '回飯店休息' },
             { id: 206, dateId: 'd2', name: '維多利亞港', time: '16:00', durationHours: 2, durationMinutes: 0, category: '景點', region: '尖沙咀', notes: '散步看夕陽' },
             { id: 207, dateId: 'd2', name: 'City Walk (夜)', time: '19:00', durationHours: 4, durationMinutes: 0, category: '景點', region: '尖沙咀', notes: '晚餐與逛街。注意末班車回尖沙咀 00:54' },
-
             { id: 301, dateId: 'd3', name: '買蛋塔 (早起)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', region: '尖沙咀', notes: 'Bakehouse / 蛋塔，準備帶回台灣' },
             { id: 302, dateId: 'd3', name: '前往機場', time: '10:30', durationHours: 1, durationMinutes: 0, category: '交通', region: '', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
             { id: 303, dateId: 'd3', name: '抵達機場 Check in', time: '11:30', durationHours: 2, durationMinutes: 0, category: '交通', region: '機場', notes: '抵達機場辦理登機' }
@@ -594,6 +590,7 @@
 
     createApp({
         setup() {
+            // State
             const isMenuOpen = ref(false);
             const isEditMode = ref(false);
             const activeTab = ref('info');
@@ -609,16 +606,16 @@
             const selectedItem = ref(null);
             const listType = ref('');
 
-            // Version v21
-            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v21') || '{"start":"2026-03-06","end":"2026-03-08"}'));
-            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v21') || JSON.stringify(initData.dates)));
-            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v21') || JSON.stringify(initData.itinerary)));
-            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v21') || JSON.stringify(initData.flights)));
-            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v21') || JSON.stringify(initData.hotels)));
-            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v21') || JSON.stringify(initData.shopping)));
-            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v21') || JSON.stringify(initData.food)));
-            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v21') || '[]'));
-            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v21') || '[]'));
+            // Data Persistence (v22)
+            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v22') || '{"start":"2026-03-06","end":"2026-03-08"}'));
+            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v22') || JSON.stringify(initData.dates)));
+            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v22') || JSON.stringify(initData.itinerary)));
+            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v22') || JSON.stringify(initData.flights)));
+            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v22') || JSON.stringify(initData.hotels)));
+            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v22') || JSON.stringify(initData.shopping)));
+            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v22') || JSON.stringify(initData.food)));
+            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v22') || '[]'));
+            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v22') || '[]'));
 
             const activeDateId = ref(tripDates.value[0]?.id || 'd1');
             const tempRange = ref({ ...tripRange.value });
@@ -685,15 +682,15 @@
             });
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v21', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v21', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v21', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v21', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v21', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v21', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v21', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v21', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v21', JSON.stringify(expenseList.value));
+                localStorage.setItem('hk_range_v22', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v22', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v22', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v22', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v22', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v22', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v22', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v22', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v22', JSON.stringify(expenseList.value));
             }, { deep: true });
 
             const applyDateRange = () => {
