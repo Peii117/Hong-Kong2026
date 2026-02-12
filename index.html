@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 行程助手 (Map Fixed)</title>
+    <title>香港之旅 - 雲端共用版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
         :root { --color-blue: #4169E1; }
         .text-royal-blue { color: var(--color-blue); }
@@ -16,10 +19,7 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         .scale-in-center { animation: scale-in-center 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        @keyframes scale-in-center { 
-            0% { transform: scale(0.98); opacity: 0; } 
-            100% { transform: scale(1); opacity: 1; } 
-        }
+        @keyframes scale-in-center { 0% { transform: scale(0.98); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         
         .nav-shadow { box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
         .card-transition { transition: all 0.2s ease; }
@@ -39,17 +39,21 @@
             <button @click="isMenuOpen = true" class="text-gray-600 text-xl p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <i class="fas fa-bars"></i>
             </button>
-
             <div class="text-center">
                 <h1 class="text-xl font-black text-gray-800 tracking-tight">{{ activeMenuName }}</h1>
                 <p v-if="activeTab === 'itinerary'" class="text-[10px] font-bold text-gray-400">
                     {{ tripRange.start }} ~ {{ tripRange.end }}
                 </p>
-                <p v-if="activeTab === 'info'" class="text-[10px] font-bold text-emerald-600">
-                    匯率: 1 HKD ≈ {{ exchangeRate }} TWD
-                </p>
+                <div v-if="activeTab === 'info'" class="flex flex-col items-center">
+                    <p class="text-[10px] font-bold text-emerald-600">
+                        匯率: 1 HKD ≈ {{ exchangeRate }} TWD
+                    </p>
+                    <p class="text-[9px] text-blue-500 font-bold flex items-center mt-0.5">
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1" :class="isSyncing ? 'animate-ping' : ''"></span> 
+                        {{ isSyncing ? '同步中...' : '已連線' }}
+                    </p>
+                </div>
             </div>
-
             <button @click="isEditMode = !isEditMode" 
                     :class="isEditMode ? 'bg-red-500 text-white shadow-lg shadow-red-200' : 'bg-gray-100 text-gray-600'"
                     class="text-xs px-4 py-2 rounded-full font-bold transition-all active:scale-90">
@@ -90,13 +94,18 @@
                         <span>{{ menu.name }}</span>
                     </li>
                 </ul>
+                <div class="mt-8 px-2">
+                    <button @click="copyShareLink" class="w-full py-3 bg-gray-900 text-white rounded-xl text-xs font-bold flex items-center justify-center hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-link mr-2"></i> 複製分享連結
+                    </button>
+                    <p class="text-[10px] text-gray-400 mt-2 text-center">將此連結傳給朋友即可共同編輯</p>
+                </div>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.3 (Fixed)</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Cloud Sync v1.0</div>
         </aside>
     </transition>
 
     <main class="p-4 pb-20">
-        
         <section v-if="activeTab === 'info'" class="scale-in-center space-y-6">
             <div class="bg-gradient-to-br from-blue-500 to-royal-blue rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden">
                 <div class="relative z-10 flex justify-between items-center">
@@ -112,7 +121,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="space-y-4">
                 <div class="flex justify-between items-center px-2">
                     <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-info-circle mr-2 text-royal-blue"></i>旅行筆記</h4>
@@ -129,7 +137,6 @@
                 </div>
                 <div v-else class="text-center py-6 bg-gray-50 rounded-[1.5rem] text-gray-300 text-xs font-bold border-2 border-dashed border-gray-100">暫無筆記</div>
             </div>
-
             <div class="space-y-4">
                 <div class="flex justify-between items-center px-2">
                     <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-plane-departure mr-2 text-royal-blue"></i>航班與住宿</h4>
@@ -163,51 +170,35 @@
         <section v-if="activeTab === 'itinerary'" class="scale-in-center">
             <div v-if="tripDates.length > 0">
                 <div v-if="isEditMode" class="mb-6">
-                    <button @click="openAddModal" 
-                            class="w-full py-4 border-2 border-dashed border-gray-200 rounded-[2rem] text-gray-400 text-sm font-bold hover:bg-gray-50 active:bg-gray-100 transition-all">
-                        <i class="fas fa-plus-circle mr-2 text-royal-blue"></i>
-                        新增行程到 Day {{ currentDayNumber }}
+                    <button @click="openAddModal" class="w-full py-4 border-2 border-dashed border-gray-200 rounded-[2rem] text-gray-400 text-sm font-bold hover:bg-gray-50 active:bg-gray-100 transition-all">
+                        <i class="fas fa-plus-circle mr-2 text-royal-blue"></i>新增行程到 Day {{ currentDayNumber }}
                     </button>
                 </div>
-
                 <div v-if="currentItinerary.length > 0" class="space-y-3">
                     <article v-for="item in currentItinerary" :key="item.id" 
                          @click="handleItemClick(item)"
                          :class="[getStyles(item.category, item.region).border, getStyles(item.category, item.region).shadow]"
                          class="p-5 bg-white border border-gray-100 rounded-[1.8rem] border-l-[6px] flex justify-between items-center card-transition active:scale-[0.97] cursor-pointer shadow-sm">
-                        
                         <div class="flex-1 pr-3">
                             <div class="flex items-center space-x-3 mb-1">
-                                <span class="text-sm font-black text-gray-800">
-                                    <i class="far fa-clock mr-1 text-royal-blue"></i>{{ item.time }}
-                                </span>
-                                <span v-if="item.durationHours > 0 || item.durationMinutes > 0" 
-                                      class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold italic">
+                                <span class="text-sm font-black text-gray-800"><i class="far fa-clock mr-1 text-royal-blue"></i>{{ item.time }}</span>
+                                <span v-if="item.durationHours > 0 || item.durationMinutes > 0" class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold italic">
                                     <i class="fas fa-hourglass-half mr-1 scale-75"></i>{{ item.durationHours }}h {{ item.durationMinutes }}m
                                 </span>
                             </div>
                             <h3 class="font-bold text-gray-900 text-lg leading-snug">{{ item.name }}</h3>
                         </div>
-
                         <div class="flex flex-col items-end space-y-2">
-                            <span :class="getStyles(item.category, item.region).bg" 
-                                  class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider border shadow-sm uppercase">
-                                {{ item.category }}
-                            </span>
-                            <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                            <span :class="getStyles(item.category, item.region).bg" class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider border shadow-sm uppercase">{{ item.category }}</span>
+                            <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                                class="w-16 py-1 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg text-[10px] font-bold border border-gray-200 active:bg-gray-200 transition-colors">
                                 <i class="fas fa-map-marked-alt mr-1"></i>地圖
                             </a>
-                            <button v-if="isEditMode" @click.stop="deleteItem('itinerary', item.id)" 
-                                    class="text-red-400 hover:text-red-600 transition-colors px-2">
-                                <i class="fas fa-trash-alt text-xs"></i>
-                            </button>
+                            <button v-if="isEditMode" @click.stop="deleteItem('itinerary', item.id)" class="text-red-400 hover:text-red-600 transition-colors px-2"><i class="fas fa-trash-alt text-xs"></i></button>
                         </div>
                     </article>
                 </div>
-                <div v-else class="text-center py-20 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-100">
-                    <p class="text-gray-400 font-bold text-sm">今日尚無規劃</p>
-                </div>
+                <div v-else class="text-center py-20 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-100"><p class="text-gray-400 font-bold text-sm">今日尚無規劃</p></div>
             </div>
         </section>
 
@@ -224,16 +215,12 @@
                 <div class="flex-1">
                     <h3 class="font-bold text-gray-800" :class="item.checked ? 'line-through' : ''">{{ item.name }}</h3>
                     <div class="flex items-center mt-1 space-x-2">
-                        <span v-if="item.region" 
-                              :class="getStyles('景點', item.region).bg"
-                              class="text-[9px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
-                            {{ item.region }}
-                        </span>
+                        <span v-if="item.region" :class="getStyles('景點', item.region).bg" class="text-[9px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">{{ item.region }}</span>
                         <p class="text-xs text-gray-400 font-medium">{{ item.info || ' ' }}</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                        class="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100">
                         <i class="fas fa-location-arrow text-xs"></i>
                     </a>
@@ -255,16 +242,12 @@
                 <div class="flex-1">
                     <h3 class="font-bold text-gray-800 text-lg">{{ item.name }}</h3>
                     <div class="flex items-center mt-1 space-x-2">
-                        <span v-if="item.region" 
-                              :class="getStyles('美食', item.region).bg"
-                              class="text-[9px] px-2 py-0.5 rounded-md font-black tracking-wider uppercase">
-                            {{ item.region }}
-                        </span>
+                        <span v-if="item.region" :class="getStyles('美食', item.region).bg" class="text-[9px] px-2 py-0.5 rounded-md font-black tracking-wider uppercase">{{ item.region }}</span>
                         <p class="text-xs text-gray-400">{{ item.info }}</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                        class="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100 transition-colors">
                         <i class="fas fa-location-arrow"></i>
                     </a>
@@ -288,18 +271,15 @@
                     </div>
                 </div>
             </div>
-
             <div v-if="isEditMode">
                 <button @click="openExpenseModal" class="w-full py-4 border-2 border-dashed border-emerald-200 rounded-3xl text-emerald-600 text-sm font-bold bg-emerald-50/30">
                     <i class="fas fa-plus mr-2"></i>記一筆
                 </button>
             </div>
-
             <div v-if="expenseList.length > 0" class="space-y-3">
                 <div v-for="exp in expenseList" :key="exp.id" class="bg-white border border-gray-100 rounded-[1.5rem] p-4 flex justify-between items-center shadow-sm">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white"
-                             :class="getPayerColor(exp.payer)">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white" :class="getPayerColor(exp.payer)">
                             {{ exp.payer ? exp.payer[0] : '?' }}
                         </div>
                         <div>
@@ -326,66 +306,45 @@
             <h2 class="text-2xl font-black mb-8">{{ isNewItem ? '新增行程' : '修改行程' }}</h2>
             <div class="space-y-6">
                 <input v-model="newItem.name" placeholder="景點名稱..." class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none focus:border-royal-blue bg-transparent">
-                <input v-model="newItem.region" placeholder="地區 (自動變色，如: 旺角, 迪士尼...)" class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none focus:border-royal-blue bg-transparent">
-                
+                <input v-model="newItem.region" placeholder="地區 (如: 旺角, 迪士尼...)" class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none focus:border-royal-blue bg-transparent">
                 <div class="grid grid-cols-2 gap-6">
                     <input v-model="newItem.time" type="time" class="w-full border-b-2 border-gray-100 p-2.5 outline-none font-bold">
                     <select v-model="newItem.category" class="w-full border-b-2 border-gray-100 p-2.5 outline-none font-bold">
                         <option v-for="cat in Object.keys(categoryConfig)" :key="cat">{{ cat }}</option>
                     </select>
                 </div>
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">停留時間</label>
-                    <div class="flex items-center space-x-2">
-                        <select v-model="newItem.durationHours" class="border-b-2 border-gray-100 p-2 font-bold outline-none"><option v-for="h in 13" :value="h-1">{{ h-1 }} 時</option></select>
-                        <select v-model="newItem.durationMinutes" class="border-b-2 border-gray-100 p-2 font-bold outline-none"><option v-for="m in [0,10,20,30,40,50]" :value="m">{{ m }} 分</option></select>
-                    </div>
+                <div class="flex items-center space-x-2">
+                    <select v-model="newItem.durationHours" class="border-b-2 border-gray-100 p-2 font-bold outline-none"><option v-for="h in 13" :value="h-1">{{ h-1 }} 時</option></select>
+                    <select v-model="newItem.durationMinutes" class="border-b-2 border-gray-100 p-2 font-bold outline-none"><option v-for="m in [0,10,20,30,40,50]" :value="m">{{ m }} 分</option></select>
                 </div>
                 <textarea v-model="newItem.notes" placeholder="備註..." class="w-full border-2 border-gray-50 rounded-2xl p-4 h-32"></textarea>
             </div>
             <button @click="saveItem" class="w-full mt-10 py-4 bg-royal-blue text-white rounded-2xl font-black shadow-lg">儲存</button>
         </div>
     </div>
-
+    
     <div v-if="showExpenseModal" class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div @click="showExpenseModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
         <div class="relative bg-white w-full max-w-sm rounded-t-[3rem] sm:rounded-[3rem] p-8 scale-in-center shadow-2xl">
             <h2 class="text-xl font-black mb-6">新增花費</h2>
             <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">消費項目</label>
-                    <input v-model="newExpense.item" placeholder="例如：晚餐" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
-                </div>
+                <input v-model="newExpense.item" placeholder="消費項目" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
                 <div class="flex space-x-4">
-                    <div class="flex-1">
-                        <label class="text-[10px] font-black text-gray-400 uppercase ml-2">金額</label>
-                        <input v-model="newExpense.amount" type="number" placeholder="0" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
-                    </div>
-                    <div class="w-24">
-                        <label class="text-[10px] font-black text-gray-400 uppercase ml-2">幣別</label>
-                        <select v-model="newExpense.currency" class="w-full border-b-2 border-gray-100 p-2.5 font-bold outline-none bg-white">
-                            <option value="HKD">HKD</option>
-                            <option value="TWD">TWD</option>
-                        </select>
-                    </div>
+                    <input v-model="newExpense.amount" type="number" placeholder="0" class="flex-1 border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
+                    <select v-model="newExpense.currency" class="w-24 border-b-2 border-gray-100 p-2.5 font-bold outline-none bg-white">
+                        <option value="HKD">HKD</option>
+                        <option value="TWD">TWD</option>
+                    </select>
                 </div>
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">支付人</label>
-                    <div class="flex space-x-2">
-                        <button v-for="p in payers" :key="p" 
-                                @click="newExpense.payer = p"
-                                :class="newExpense.payer === p ? 'bg-royal-blue text-white ring-2 ring-blue-200' : 'bg-gray-100 text-gray-500'"
-                                class="flex-1 py-2 rounded-xl font-bold text-sm transition-all">
-                            {{ p }}
-                        </button>
-                    </div>
+                <div class="flex space-x-2">
+                    <button v-for="p in payers" :key="p" @click="newExpense.payer = p" :class="newExpense.payer === p ? 'bg-royal-blue text-white' : 'bg-gray-100 text-gray-500'" class="flex-1 py-2 rounded-xl font-bold text-sm">{{ p }}</button>
                 </div>
             </div>
             <button @click="saveExpense" class="w-full mt-8 py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-lg">儲存</button>
         </div>
     </div>
 
-    <div v-if="showGeneralInfoModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div v-if="showGeneralInfoModal" class="fixed inset-0 z-[70] flex items-center justify-center p-0 sm:p-4">
         <div @click="showGeneralInfoModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
         <div class="relative bg-white w-full max-w-sm rounded-[3rem] p-8 scale-in-center shadow-2xl">
             <h2 class="text-xl font-black mb-6">新增筆記</h2>
@@ -404,8 +363,8 @@
             <div class="space-y-6">
                 <input v-model="newListEntry.name" placeholder="名稱..." class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none focus:border-royal-blue">
                 <div class="grid grid-cols-2 gap-4">
-                    <input v-model="newListEntry.region" placeholder="地區 (如: 尖沙咀)" class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none">
-                    <input v-model="newListEntry.info" placeholder="資訊 (預算/必點)" class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none">
+                    <input v-model="newListEntry.region" placeholder="地區..." class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none">
+                    <input v-model="newListEntry.info" placeholder="資訊..." class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none">
                 </div>
                 <textarea v-model="newListEntry.notes" placeholder="詳細備註..." class="w-full border-2 border-gray-50 rounded-2xl p-4 h-24 outline-none"></textarea>
             </div>
@@ -463,7 +422,7 @@
                 <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ selectedItem?.notes }}</p>
             </div>
             <div class="flex flex-col space-y-4">
-                <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
+                <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
                    class="block w-full py-4 bg-royal-blue text-white rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all">
                     <i class="fas fa-location-arrow mr-2"></i>開始地圖導航
                 </a>
@@ -487,6 +446,20 @@
 </div>
 
 <script>
+    // --- Firebase Setup ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1pbRlGwZMMle7cGo7lFlcCqp5M_4vhbg",
+        authDomain: "hk2026-6cda5.firebaseapp.com",
+        databaseURL: "https://hk2026-6cda5-default-rtdb.firebaseio.com",
+        projectId: "hk2026-6cda5",
+        storageBucket: "hk2026-6cda5.firebasestorage.app",
+        messagingSenderId: "291705132256",
+        appId: "1:291705132256:web:beb036becf6426f2bcac85",
+        measurementId: "G-YKNDXB99W6"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
     const categoryConfig = {
@@ -511,11 +484,7 @@
     };
 
     const initData = {
-        dates: [
-            {id:'d1', fullDate:'2026-03-06'},
-            {id:'d2', fullDate:'2026-03-07'},
-            {id:'d3', fullDate:'2026-03-08'}
-        ],
+        dates: [{id:'d1', fullDate:'2026-03-06'}, {id:'d2', fullDate:'2026-03-07'}, {id:'d3', fullDate:'2026-03-08'}],
         itinerary: [
             { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', region: '機場', notes: '搭計程車到飯店，車程約30min，約150港幣 (台幣約610)' },
             { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', region: '迪士尼', notes: '寄放行李，搭接駁車前往樂園 (步行為15-20min)' },
@@ -605,39 +574,124 @@
             const isNewItem = ref(true);
             const selectedItem = ref(null);
             const listType = ref('');
+            const isSyncing = ref(false);
+            
+            // Reactive Data Containers
+            const tripRange = ref({ start: '', end: '' });
+            const tripDates = ref([]);
+            const itineraryList = ref([]);
+            const flights = ref([]);
+            const hotels = ref([]);
+            const shoppingList = ref([]);
+            const foodList = ref([]);
+            const generalInfoList = ref([]);
+            const expenseList = ref([]);
 
-            // Data Persistence (v22)
-            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v22') || '{"start":"2026-03-06","end":"2026-03-08"}'));
-            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v22') || JSON.stringify(initData.dates)));
-            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v22') || JSON.stringify(initData.itinerary)));
-            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v22') || JSON.stringify(initData.flights)));
-            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v22') || JSON.stringify(initData.hotels)));
-            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v22') || JSON.stringify(initData.shopping)));
-            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v22') || JSON.stringify(initData.food)));
-            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v22') || '[]'));
-            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v22') || '[]'));
-
-            const activeDateId = ref(tripDates.value[0]?.id || 'd1');
-            const tempRange = ref({ ...tripRange.value });
+            const activeDateId = ref('d1');
+            const tempRange = ref({ start: '', end: '' });
             
             const weather = ref({ temp: '--', desc: '載入中...', humidity: '--', iconUrl: '' });
             const exchangeRate = ref('--');
             const payers = ['沛晴', '芳晨', '玟妤'];
 
+            // Firebase Logic
+            const tripId = ref('');
+            let dbRef = null;
+            let isRemoteUpdate = false; // Flag to prevent circular updates
+
+            onMounted(() => {
+                // 1. Get or Generate Trip ID from Hash
+                if (window.location.hash && window.location.hash.length > 1) {
+                    tripId.value = window.location.hash.substring(1);
+                } else {
+                    tripId.value = 'trip_' + Math.random().toString(36).substr(2, 9);
+                    window.location.hash = tripId.value;
+                }
+
+                dbRef = db.ref('trips/' + tripId.value);
+
+                // 2. Listen for Firebase Data
+                dbRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    isSyncing.value = true;
+                    isRemoteUpdate = true; // Block watchers from pushing back
+
+                    if (data) {
+                        // Room exists, load data
+                        tripRange.value = data.range || { start: '', end: '' };
+                        tripDates.value = data.dates || [];
+                        itineraryList.value = data.itinerary || [];
+                        flights.value = data.flights || [];
+                        hotels.value = data.hotels || [];
+                        shoppingList.value = data.shopping || [];
+                        foodList.value = data.food || [];
+                        generalInfoList.value = data.general || [];
+                        expenseList.value = data.expense || [];
+                        
+                        // Set active date if not set
+                        if (!activeDateId.value && tripDates.value.length > 0) {
+                            activeDateId.value = tripDates.value[0].id;
+                        }
+                    } else {
+                        // New room, push initial data
+                        tripRange.value = { start: '2026-03-06', end: '2026-03-08' };
+                        tripDates.value = initData.dates;
+                        itineraryList.value = initData.itinerary;
+                        flights.value = initData.flights;
+                        hotels.value = initData.hotels;
+                        shoppingList.value = initData.shopping;
+                        foodList.value = initData.food;
+                        activeDateId.value = 'd1';
+                        // Push to DB immediately
+                        updateFirebase();
+                    }
+                    
+                    setTimeout(() => { isSyncing.value = false; isRemoteUpdate = false; }, 500);
+                });
+
+                // Fetch External APIs
+                fetchWeather();
+                fetchRate();
+            });
+
+            const updateFirebase = () => {
+                if (isRemoteUpdate) return; // Don't sync if update came from cloud
+                
+                isSyncing.value = true;
+                dbRef.set({
+                    range: tripRange.value,
+                    dates: tripDates.value,
+                    itinerary: itineraryList.value,
+                    flights: flights.value,
+                    hotels: hotels.value,
+                    shopping: shoppingList.value,
+                    food: foodList.value,
+                    general: generalInfoList.value,
+                    expense: expenseList.value
+                }).then(() => {
+                    setTimeout(() => isSyncing.value = false, 500);
+                });
+            };
+
+            // Watch all data changes to trigger Firebase update
+            watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
+                updateFirebase();
+            }, { deep: true });
+
+
+            // --- Helper Methods ---
+            const copyShareLink = () => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => alert('連結已複製！傳給朋友即可分享行程'));
+            };
+
+            // Models for Forms
             const newItem = ref({ name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
             const newFlight = ref({ code: '', depCity: '', arrCity: '', depTime: '', arrTime: '' });
             const newHotel = ref({ name: '', address: '', checkIn: '', checkOut: '' });
             const newListEntry = ref({ id: '', name: '', region: '', info: '', notes: '', checked: false });
             const newGeneralInfo = ref({ title: '', content: '' });
             const newExpense = ref({ item: '', amount: '', currency: 'HKD', payer: '沛晴', date: new Date().toISOString() });
-
-            const menus = [
-                { tab: 'info', name: '資訊', icon: 'fas fa-info-circle' },
-                { tab: 'itinerary', name: '行程', icon: 'fas fa-map-marked-alt' },
-                { tab: 'shopping', name: '景點/購物', icon: 'fas fa-shopping-bag' },
-                { tab: 'food', name: '美食', icon: 'fas fa-utensils' },
-                { tab: 'expense', name: '花費', icon: 'fas fa-wallet' }
-            ];
 
             const activeMenuName = computed(() => menus.find(m => m.tab === activeTab.value).name);
             const currentDayNumber = computed(() => tripDates.value.findIndex(d => d.id === activeDateId.value) + 1);
@@ -653,46 +707,28 @@
                     const tempData = data.temperature.data.find(t => t.place === '香港天文台') || data.temperature.data[0];
                     const humData = data.humidity.data[0];
                     const iconId = data.icon ? data.icon[0] : 50;
-                    weather.value = {
-                        temp: tempData.value,
-                        humidity: humData.value,
-                        desc: '香港實時天氣',
-                        iconUrl: 'https://www.hko.gov.hk/images/HKOWxIconOutline/pic' + iconId + '.png'
-                    };
-                } catch (e) {
-                    weather.value = { temp: 25, desc: 'API 暫停', humidity: 70, iconUrl: '' };
-                }
+                    weather.value = { temp: tempData.value, humidity: humData.value, desc: '香港實時天氣', iconUrl: 'https://www.hko.gov.hk/images/HKOWxIconOutline/pic' + iconId + '.png' };
+                } catch (e) { weather.value = { temp: 25, desc: 'API 暫停', humidity: 70, iconUrl: '' }; }
             };
 
             const fetchRate = async () => {
                 try {
                     const res = await fetch('https://open.er-api.com/v6/latest/HKD');
                     const data = await res.json();
-                    if(data && data.rates && data.rates.TWD) {
-                        exchangeRate.value = data.rates.TWD.toFixed(2);
-                    }
-                } catch (e) {
-                    exchangeRate.value = '4.00'; 
-                }
+                    if(data && data.rates && data.rates.TWD) exchangeRate.value = data.rates.TWD.toFixed(2);
+                } catch (e) { exchangeRate.value = '4.00'; }
             };
 
-            onMounted(() => {
-                fetchWeather();
-                fetchRate();
-            });
+            // Keep menus definition
+            const menus = [
+                { tab: 'info', name: '資訊', icon: 'fas fa-info-circle' },
+                { tab: 'itinerary', name: '行程', icon: 'fas fa-map-marked-alt' },
+                { tab: 'shopping', name: '景點/購物', icon: 'fas fa-shopping-bag' },
+                { tab: 'food', name: '美食', icon: 'fas fa-utensils' },
+                { tab: 'expense', name: '花費', icon: 'fas fa-wallet' }
+            ];
 
-            watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v22', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v22', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v22', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v22', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v22', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v22', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v22', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v22', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v22', JSON.stringify(expenseList.value));
-            }, { deep: true });
-
+            // Re-implement all UI helper functions
             const applyDateRange = () => {
                 const s = new Date(tempRange.value.start), e = new Date(tempRange.value.end);
                 if (isNaN(s) || isNaN(e)) return alert('請選擇日期');
@@ -710,91 +746,18 @@
                 showRangeModal.value = false;
             };
 
-            const openAddModal = () => {
-                isNewItem.value = true;
-                newItem.value = { id: Date.now(), name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: activeDateId.value, durationHours: 1, durationMinutes: 0 };
-                showEditModal.value = true;
-            };
-
-            const openListModal = (type, item = null) => {
-                listType.value = type;
-                if (item) {
-                    isNewItem.value = false;
-                    newListEntry.value = { ...item };
-                } else {
-                    isNewItem.value = true;
-                    newListEntry.value = { id: Date.now(), name: '', region: '', info: '', notes: '', checked: false };
-                }
-                showListModal.value = true;
-            };
-
-            const openGeneralInfoModal = () => {
-                newGeneralInfo.value = { title: '', content: '' };
-                showGeneralInfoModal.value = true;
-            };
-
-            const openExpenseModal = () => {
-                newExpense.value = { id: Date.now(), item: '', amount: '', currency: 'HKD', payer: '沛晴', date: new Date().toISOString() };
-                showExpenseModal.value = true;
-            };
-
-            const handleItemClick = (item) => {
-                if (isEditMode.value) {
-                    if (activeTab.value === 'itinerary') {
-                        isNewItem.value = false;
-                        newItem.value = { ...item };
-                        showEditModal.value = true;
-                    } else if (activeTab.value === 'food' || activeTab.value === 'shopping') {
-                        openListModal(activeTab.value, item);
-                    }
-                } else {
-                    selectedItem.value = item;
-                    showDetailModal.value = true;
-                }
-            };
-
-            const saveItem = () => {
-                if(!newItem.value.name) return;
-                if(isNewItem.value) itineraryList.value.push({...newItem.value});
-                else {
-                    const idx = itineraryList.value.findIndex(i => i.id === newItem.value.id);
-                    itineraryList.value[idx] = {...newItem.value};
-                }
-                showEditModal.value = false;
-            };
-
-            const saveListEntry = () => {
-                if (!newListEntry.value.name) return;
-                const targetList = listType.value === 'shopping' ? shoppingList : foodList;
-                if (isNewItem.value) targetList.value.push({ ...newListEntry.value, id: Date.now() });
-                else {
-                    const idx = targetList.value.findIndex(i => i.id === newListEntry.value.id);
-                    targetList.value[idx] = { ...newListEntry.value };
-                }
-                showListModal.value = false;
-            };
-
-            const saveFlight = () => {
-                flights.value.push({ id: Date.now(), ...newFlight.value });
-                showFlightModal.value = false;
-            };
-
-            const saveHotel = () => {
-                hotels.value.push({ id: Date.now(), ...newHotel.value });
-                showHotelModal.value = false;
-            };
-
-            const saveGeneralInfo = () => {
-                generalInfoList.value.push({ id: Date.now(), ...newGeneralInfo.value });
-                showGeneralInfoModal.value = false;
-            };
-
-            const saveExpense = () => {
-                if(!newExpense.value.item) return;
-                expenseList.value.push({ ...newExpense.value });
-                showExpenseModal.value = false;
-            };
-
+            const openAddModal = () => { isNewItem.value = true; newItem.value = { id: Date.now(), name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: activeDateId.value, durationHours: 1, durationMinutes: 0 }; showEditModal.value = true; };
+            const openListModal = (type, item = null) => { listType.value = type; if (item) { isNewItem.value = false; newListEntry.value = { ...item }; } else { isNewItem.value = true; newListEntry.value = { id: Date.now(), name: '', region: '', info: '', notes: '', checked: false }; } showListModal.value = true; };
+            const openGeneralInfoModal = () => { newGeneralInfo.value = { title: '', content: '' }; showGeneralInfoModal.value = true; };
+            const openExpenseModal = () => { newExpense.value = { id: Date.now(), item: '', amount: '', currency: 'HKD', payer: '沛晴', date: new Date().toISOString() }; showExpenseModal.value = true; };
+            const handleItemClick = (item) => { if (isEditMode.value) { if (activeTab.value === 'itinerary') { isNewItem.value = false; newItem.value = { ...item }; showEditModal.value = true; } else if (activeTab.value === 'food' || activeTab.value === 'shopping') { openListModal(activeTab.value, item); } } else { selectedItem.value = item; showDetailModal.value = true; } };
+            const saveItem = () => { if(!newItem.value.name) return; if(isNewItem.value) itineraryList.value.push({...newItem.value}); else { const idx = itineraryList.value.findIndex(i => i.id === newItem.value.id); itineraryList.value[idx] = {...newItem.value}; } showEditModal.value = false; };
+            const saveListEntry = () => { if (!newListEntry.value.name) return; const targetList = listType.value === 'shopping' ? shoppingList : foodList; if (isNewItem.value) targetList.value.push({ ...newListEntry.value, id: Date.now() }); else { const idx = targetList.value.findIndex(i => i.id === newListEntry.value.id); targetList.value[idx] = { ...newListEntry.value }; } showListModal.value = false; };
+            const saveFlight = () => { flights.value.push({ id: Date.now(), ...newFlight.value }); showFlightModal.value = false; };
+            const saveHotel = () => { hotels.value.push({ id: Date.now(), ...newHotel.value }); showHotelModal.value = false; };
+            const saveGeneralInfo = () => { generalInfoList.value.push({ id: Date.now(), ...newGeneralInfo.value }); showGeneralInfoModal.value = false; };
+            const saveExpense = () => { if(!newExpense.value.item) return; expenseList.value.push({ ...newExpense.value }); showExpenseModal.value = false; };
+            
             const deleteItem = (type, id) => {
                 if(confirm('確定要刪除嗎？')) {
                     if(type === 'itinerary') itineraryList.value = itineraryList.value.filter(i => i.id !== id);
@@ -807,28 +770,17 @@
                 }
             };
 
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                const d = new Date(dateStr);
-                return (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getDate().toString().padStart(2, '0');
-            };
-
-            const getStyles = (cat, region) => {
-                if (region && mtrColors[region]) {
-                    return mtrColors[region];
-                }
-                return categoryConfig[cat] || categoryConfig['景點'];
-            };
-            
+            const formatDate = (dateStr) => { if (!dateStr) return ''; const d = new Date(dateStr); return (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getDate().toString().padStart(2, '0'); };
+            const getStyles = (cat, region) => { if (region && mtrColors[region]) { return mtrColors[region]; } return categoryConfig[cat] || categoryConfig['景點']; };
             const getPayerColor = (p) => ({ '沛晴': 'bg-pink-400', '芳晨': 'bg-purple-400', '玟妤': 'bg-blue-400' }[p] || 'bg-gray-400');
 
             return {
-                isMenuOpen, isEditMode, activeTab, menus, activeMenuName, tripRange, tripDates, activeDateId,
+                isMenuOpen, isEditMode, activeTab, menus, activeMenuName, tripRange, tripDates, activeDateId, isSyncing,
                 showRangeModal, showEditModal, showDetailModal, showFlightModal, showHotelModal, showListModal, showGeneralInfoModal, showExpenseModal,
                 tempRange, currentItinerary, currentDayNumber, isNewItem, newItem, selectedItem, categoryConfig, payers,
                 weather, exchangeRate, flights, hotels, shoppingList, foodList, generalInfoList, expenseList, totalExpenseHKD, totalExpenseTWD,
                 newFlight, newHotel, newListEntry, newGeneralInfo, newExpense, listType,
-                formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, openExpenseModal, handleItemClick,
+                formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, openExpenseModal, handleItemClick, copyShareLink,
                 saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, saveExpense, deleteItem, getStyles, getPayerColor
             };
         }
