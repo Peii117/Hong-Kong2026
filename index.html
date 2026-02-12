@@ -92,7 +92,7 @@
                     </li>
                 </ul>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.0</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.1</div>
         </aside>
     </transition>
 
@@ -512,8 +512,8 @@
 
             // Day 3: 3/8
             { id: 301, dateId: 'd3', name: '買蛋塔 (早起)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', notes: 'Bakehouse / 蛋塔，準備帶回台灣' },
-            { id: 302, dateId: 'd3', name: '前往機場', time: '11:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
-            { id: 303, dateId: 'd3', name: '機場 Check in', time: '12:00', durationHours: 2, durationMinutes: 0, category: '交通', notes: '抵達機場辦理登機' }
+            { id: 302, dateId: 'd3', name: '前往機場', time: '10:30', durationHours: 1, durationMinutes: 0, category: '交通', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
+            { id: 303, dateId: 'd3', name: '抵達機場 Check in', time: '11:30', durationHours: 2, durationMinutes: 0, category: '交通', notes: '抵達機場辦理登機' }
         ],
         flights: [
             { id: 1, code: '星宇 JX233', depCity: 'TPE (T1)', arrCity: 'HKG (T1)', depTime: '08:00', arrTime: '10:10' },
@@ -597,16 +597,16 @@
             const selectedItem = ref(null);
             const listType = ref('');
 
-            // Data Persistence (v19) - Forces new data load
-            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v19') || '{"start":"2026-03-06","end":"2026-03-08"}'));
-            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v19') || JSON.stringify(initData.dates)));
-            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v19') || JSON.stringify(initData.itinerary)));
-            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v19') || JSON.stringify(initData.flights)));
-            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v19') || JSON.stringify(initData.hotels)));
-            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v19') || JSON.stringify(initData.shopping)));
-            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v19') || JSON.stringify(initData.food)));
-            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v19') || '[]'));
-            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v19') || '[]'));
+            // Data Persistence (v20) - Forces new data load
+            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v20') || '{"start":"2026-03-06","end":"2026-03-08"}'));
+            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v20') || JSON.stringify(initData.dates)));
+            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v20') || JSON.stringify(initData.itinerary)));
+            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v20') || JSON.stringify(initData.flights)));
+            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v20') || JSON.stringify(initData.hotels)));
+            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v20') || JSON.stringify(initData.shopping)));
+            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v20') || JSON.stringify(initData.food)));
+            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v20') || '[]'));
+            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v20') || '[]'));
 
             const activeDateId = ref(tripDates.value[0]?.id || 'd1');
             const tempRange = ref({ ...tripRange.value });
@@ -676,15 +676,15 @@
             });
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v19', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v19', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v19', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v19', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v19', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v19', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v19', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v19', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v19', JSON.stringify(expenseList.value));
+                localStorage.setItem('hk_range_v20', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v20', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v20', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v20', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v20', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v20', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v20', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v20', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v20', JSON.stringify(expenseList.value));
             }, { deep: true });
 
             const applyDateRange = () => {
