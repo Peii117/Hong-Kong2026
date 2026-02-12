@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 智慧旅遊助手 (Pro)</title>
+    <title>香港之旅 - 3/6~3/8 行程助手</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -24,7 +24,7 @@
         .nav-shadow { box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
         .card-transition { transition: all 0.2s ease; }
 
-        /* 側邊欄動畫 */
+        /* Sidebar Transition */
         .sidebar-enter-active, .sidebar-leave-active { transition: transform 0.3s ease; }
         .sidebar-enter-from, .sidebar-leave-to { transform: translateX(-100%); }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
@@ -44,7 +44,7 @@
             <div class="text-center">
                 <h1 class="text-xl font-black text-gray-800 tracking-tight">{{ activeMenuName }}</h1>
                 <p v-if="activeTab === 'itinerary'" class="text-[10px] font-bold text-gray-400">
-                    {{ tripRange.start ? tripRange.start + ' ~ ' + tripRange.end : '未設定日期' }}
+                    {{ tripRange.start }} ~ {{ tripRange.end }}
                 </p>
                 <p v-if="activeTab === 'info'" class="text-[10px] font-bold text-emerald-600">
                     匯率: 1 HKD ≈ {{ exchangeRate }} TWD
@@ -72,10 +72,6 @@
                     <i class="fas fa-calendar-plus"></i>
                 </button>
             </div>
-            <div v-else @click="isEditMode ? showRangeModal = true : null" 
-                 class="w-full h-12 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-xs text-gray-400 font-bold bg-gray-50 cursor-pointer">
-                {{ isEditMode ? '＋ 設定日期' : '請先點擊編輯' }}
-            </div>
         </nav>
     </header>
 
@@ -85,7 +81,7 @@
     <transition name="sidebar">
         <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-64 bg-white z-50 shadow-2xl p-6 flex flex-col justify-between">
             <div>
-                <h2 class="text-2xl font-black text-gray-800 mb-8 px-2">功能選單</h2>
+                <h2 class="text-2xl font-black text-gray-800 mb-8 px-2">香港之旅</h2>
                 <ul class="space-y-2">
                     <li v-for="menu in menus" :key="menu.tab" 
                         @click="activeTab = menu.tab; isMenuOpen = false"
@@ -96,9 +92,7 @@
                     </li>
                 </ul>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">
-                Trip Helper v2.0
-            </div>
+            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.0</div>
         </aside>
     </transition>
 
@@ -108,7 +102,7 @@
             <div class="bg-gradient-to-br from-blue-500 to-royal-blue rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden">
                 <div class="relative z-10 flex justify-between items-center">
                     <div>
-                        <p class="text-xs font-bold opacity-80 uppercase tracking-widest mb-1">Hong Kong Weather</p>
+                        <p class="text-xs font-bold opacity-80 uppercase tracking-widest mb-1">Hong Kong</p>
                         <h3 class="text-3xl font-black">{{ weather.temp }}°C</h3>
                         <p class="text-sm font-medium opacity-90">{{ weather.desc }}</p>
                     </div>
@@ -156,9 +150,10 @@
                 </div>
                 <div v-if="hotels.length > 0" class="space-y-2">
                     <div v-for="h in hotels" :key="h.id" class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center">
-                        <div>
+                        <div class="flex-1 mr-2">
                             <span class="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded mr-2">HOTEL</span>
                             <span class="text-xs font-bold text-gray-700">{{ h.name }}</span>
+                            <p class="text-[10px] text-gray-400 mt-1 ml-1">{{ h.checkIn }} 入住</p>
                         </div>
                         <button v-if="isEditMode" @click="deleteItem('hotel', h.id)" class="text-red-300 text-xs"><i class="fas fa-times"></i></button>
                     </div>
@@ -200,7 +195,7 @@
                                   class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider text-white border shadow-sm uppercase">
                                 {{ item.category }}
                             </span>
-                            <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                            <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                                class="w-16 py-1 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg text-[10px] font-bold border border-gray-200 active:bg-gray-200 transition-colors">
                                 <i class="fas fa-map-marked-alt mr-1"></i>地圖
                             </a>
@@ -215,16 +210,12 @@
                     <p class="text-gray-400 font-bold text-sm">今日尚無規劃</p>
                 </div>
             </div>
-            <div v-else class="text-center py-32">
-                <i class="fas fa-calendar-alt text-6xl text-gray-100 mb-6"></i>
-                <p class="text-gray-300 font-black italic uppercase tracking-widest">Ready for your trip?</p>
-            </div>
         </section>
 
         <section v-if="activeTab === 'shopping'" class="scale-in-center space-y-4">
             <div v-if="isEditMode" class="mb-4">
                 <button @click="openListModal('shopping')" class="w-full py-4 border-2 border-dashed border-pink-200 rounded-3xl text-pink-500 text-sm font-bold bg-pink-50/30">
-                    <i class="fas fa-cart-plus mr-2"></i>新增景點/購物項目
+                    <i class="fas fa-cart-plus mr-2"></i>新增景點/購物
                 </button>
             </div>
             <div v-for="item in shoppingList" :key="item.id" 
@@ -234,22 +225,25 @@
                 <div class="flex-1">
                     <h3 class="font-bold text-gray-800" :class="item.checked ? 'line-through' : ''">{{ item.name }}</h3>
                     <div class="flex items-center mt-1 space-x-2">
-                        <span v-if="item.region" class="text-[9px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold">{{ item.region }}</span>
-                        <p class="text-xs text-gray-400 font-medium">{{ item.info || '點擊填寫詳情' }}</p>
+                        <span v-if="item.region" class="text-[9px] bg-pink-50 text-pink-500 px-2 py-0.5 rounded-md font-bold">{{ item.region }}</span>
+                        <p class="text-xs text-gray-400 font-medium">{{ item.info || ' ' }}</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                       class="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100">
+                        <i class="fas fa-location-arrow text-xs"></i>
+                    </a>
                     <i :class="item.checked ? 'fas fa-check-circle text-emerald-500' : 'far fa-circle text-gray-300'" class="text-xl"></i>
                     <button v-if="isEditMode" @click.stop="deleteItem('shopping', item.id)" class="text-red-300 p-2"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-            <div v-if="shoppingList.length === 0" class="text-center py-20 text-gray-300 text-xs font-bold italic">Shopping List is Empty</div>
         </section>
 
         <section v-if="activeTab === 'food'" class="scale-in-center space-y-4">
             <div v-if="isEditMode" class="mb-4">
                 <button @click="openListModal('food')" class="w-full py-4 border-2 border-dashed border-orange-200 rounded-3xl text-orange-500 text-sm font-bold bg-orange-50/30">
-                    <i class="fas fa-utensils mr-2"></i>新增美食名單
+                    <i class="fas fa-utensils mr-2"></i>新增美食
                 </button>
             </div>
             <div v-for="item in foodList" :key="item.id" 
@@ -263,7 +257,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
                        class="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100 transition-colors">
                         <i class="fas fa-location-arrow"></i>
                     </a>
@@ -274,7 +268,6 @@
         </section>
 
         <section v-if="activeTab === 'expense'" class="scale-in-center space-y-6">
-            
             <div class="bg-gray-900 rounded-[2rem] p-6 text-white shadow-xl">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Total Expense</p>
                 <div class="flex justify-between items-end">
@@ -300,7 +293,7 @@
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white"
                              :class="getPayerColor(exp.payer)">
-                            {{ exp.payer ? exp.payer[0] : '公' }}
+                            {{ exp.payer ? exp.payer[0] : '?' }}
                         </div>
                         <div>
                             <h4 class="font-bold text-gray-800 text-sm">{{ exp.item }}</h4>
@@ -319,46 +312,6 @@
         </section>
 
     </main>
-
-    <div v-if="showExpenseModal" class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div @click="showExpenseModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-        <div class="relative bg-white w-full max-w-sm rounded-t-[3rem] sm:rounded-[3rem] p-8 scale-in-center shadow-2xl">
-            <h2 class="text-xl font-black mb-6">新增花費</h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">消費項目</label>
-                    <input v-model="newExpense.item" placeholder="例如：晚餐、計程車" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
-                </div>
-                
-                <div class="flex space-x-4">
-                    <div class="flex-1">
-                        <label class="text-[10px] font-black text-gray-400 uppercase ml-2">金額</label>
-                        <input v-model="newExpense.amount" type="number" placeholder="0" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
-                    </div>
-                    <div class="w-24">
-                        <label class="text-[10px] font-black text-gray-400 uppercase ml-2">幣別</label>
-                        <select v-model="newExpense.currency" class="w-full border-b-2 border-gray-100 p-2.5 font-bold outline-none bg-white">
-                            <option value="HKD">HKD</option>
-                            <option value="TWD">TWD</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">支付人</label>
-                    <div class="flex space-x-2">
-                        <button v-for="p in payers" :key="p" 
-                                @click="newExpense.payer = p"
-                                :class="newExpense.payer === p ? 'bg-royal-blue text-white ring-2 ring-blue-200' : 'bg-gray-100 text-gray-500'"
-                                class="flex-1 py-2 rounded-xl font-bold text-sm transition-all">
-                            {{ p }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <button @click="saveExpense" class="w-full mt-8 py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-lg">儲存</button>
-        </div>
-    </div>
 
     <div v-if="showEditModal" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div @click="showEditModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
@@ -385,6 +338,44 @@
         </div>
     </div>
 
+    <div v-if="showExpenseModal" class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div @click="showExpenseModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="relative bg-white w-full max-w-sm rounded-t-[3rem] sm:rounded-[3rem] p-8 scale-in-center shadow-2xl">
+            <h2 class="text-xl font-black mb-6">新增花費</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2">消費項目</label>
+                    <input v-model="newExpense.item" placeholder="例如：晚餐" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
+                </div>
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black text-gray-400 uppercase ml-2">金額</label>
+                        <input v-model="newExpense.amount" type="number" placeholder="0" class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none">
+                    </div>
+                    <div class="w-24">
+                        <label class="text-[10px] font-black text-gray-400 uppercase ml-2">幣別</label>
+                        <select v-model="newExpense.currency" class="w-full border-b-2 border-gray-100 p-2.5 font-bold outline-none bg-white">
+                            <option value="HKD">HKD</option>
+                            <option value="TWD">TWD</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 block">支付人</label>
+                    <div class="flex space-x-2">
+                        <button v-for="p in payers" :key="p" 
+                                @click="newExpense.payer = p"
+                                :class="newExpense.payer === p ? 'bg-royal-blue text-white ring-2 ring-blue-200' : 'bg-gray-100 text-gray-500'"
+                                class="flex-1 py-2 rounded-xl font-bold text-sm transition-all">
+                            {{ p }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button @click="saveExpense" class="w-full mt-8 py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-lg">儲存</button>
+        </div>
+    </div>
+
     <div v-if="showGeneralInfoModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
         <div @click="showGeneralInfoModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
         <div class="relative bg-white w-full max-w-sm rounded-[3rem] p-8 scale-in-center shadow-2xl">
@@ -400,7 +391,7 @@
     <div v-if="showListModal" class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div @click="showListModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
         <div class="relative bg-white w-full max-w-sm rounded-t-[3rem] sm:rounded-[3rem] p-8 scale-in-center shadow-2xl">
-            <h2 class="text-2xl font-black mb-8">{{ listType === 'shopping' ? '景點/購物清單' : '美食必吃' }}</h2>
+            <h2 class="text-2xl font-black mb-8">{{ listType === 'shopping' ? '購物清單' : '美食必吃' }}</h2>
             <div class="space-y-6">
                 <input v-model="newListEntry.name" placeholder="名稱..." class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none focus:border-royal-blue">
                 <div class="grid grid-cols-2 gap-4">
@@ -463,7 +454,7 @@
                 <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ selectedItem?.notes }}</p>
             </div>
             <div class="flex flex-col space-y-4">
-                <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
+                <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
                    class="block w-full py-4 bg-royal-blue text-white rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all">
                     <i class="fas fa-location-arrow mr-2"></i>開始地圖導航
                 </a>
@@ -497,42 +488,94 @@
         '住宿': { bg: 'bg-indigo-500 border-indigo-600', border: 'border-indigo-500', shadow: 'shadow-indigo-50' }
     };
 
-    // 預載行程 (3/6 - 3/9)
+    // Initial Data based on user request
     const initData = {
         dates: [
-            {id:'d1', fullDate:'2024-03-06'},
-            {id:'d2', fullDate:'2024-03-07'},
-            {id:'d3', fullDate:'2024-03-08'},
-            {id:'d4', fullDate:'2024-03-09'}
+            {id:'d1', fullDate:'2026-03-06'},
+            {id:'d2', fullDate:'2026-03-07'},
+            {id:'d3', fullDate:'2026-03-08'}
         ],
         itinerary: [
-            { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', notes: '搭計程車到飯店，車程約30min，約150港幣' },
-            { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '寄放行李，搭接駁車前往樂園 (15-20min)' },
+            // Day 1: 3/6
+            { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', notes: '搭計程車到飯店，車程約30min，約150港幣 (台幣約610)' },
+            { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '寄放行李，搭接駁車前往樂園 (步行為15-20min)' },
             { id: 103, dateId: 'd1', name: '迪士尼樂園', time: '13:00', durationHours: 9, durationMinutes: 0, category: '景點', notes: '盡情遊玩！結束後搭接駁車回飯店' },
-            { id: 201, dateId: 'd2', name: '飯店 Check out', time: '09:30', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '前往地鐵迪士尼站' },
-            { id: 202, dateId: 'd2', name: '地鐵轉乘', time: '10:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '迪士尼->欣澳->中環->尖沙咀 (約45min)' },
-            { id: 203, dateId: 'd2', name: '金域假日酒店', time: '11:00', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '尖沙咀站N5出口最近(N1有電梯)，寄放行李' },
-            { id: 204, dateId: 'd2', name: 'City Walk', time: '12:00', durationHours: 3, durationMinutes: 0, category: '景點', notes: '旺角 / 油麻地 / 尖沙咀' },
-            { id: 205, dateId: 'd2', name: '飯店 Check in', time: '15:00', durationHours: 1, durationMinutes: 0, category: '住宿', notes: '休息' },
+            
+            // Day 2: 3/7
+            { id: 201, dateId: 'd2', name: '飯店 Check out', time: '09:30', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '前往地鐵迪士尼站 (10min)' },
+            { id: 202, dateId: 'd2', name: '地鐵轉乘', time: '10:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '迪士尼->欣澳(10min)->中環(25min)->尖沙咀(10min)' },
+            { id: 203, dateId: 'd2', name: '金域假日酒店', time: '11:00', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '尖沙咀站 N5出口最近 / N1有電梯。從N1步行到酒店約2min。寄放行李。' },
+            { id: 204, dateId: 'd2', name: 'City Walk', time: '12:00', durationHours: 3, durationMinutes: 0, category: '景點', notes: '旺角 / 油麻地 / 尖沙咀 區域漫遊' },
+            { id: 205, dateId: 'd2', name: '飯店 Check in', time: '15:00', durationHours: 1, durationMinutes: 0, category: '住宿', notes: '回飯店休息' },
             { id: 206, dateId: 'd2', name: '維多利亞港', time: '16:00', durationHours: 2, durationMinutes: 0, category: '景點', notes: '散步看夕陽' },
-            { id: 207, dateId: 'd2', name: 'City Walk (夜)', time: '19:00', durationHours: 4, durationMinutes: 0, category: '景點', notes: '晚餐與逛街，注意末班車回尖沙咀 00:54' },
-            { id: 401, dateId: 'd4', name: '買蛋塔 (Bakehouse?)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', notes: '早起買蛋塔回台灣' },
-            { id: 402, dateId: 'd4', name: '前往機場', time: '11:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
-            { id: 403, dateId: 'd4', name: '機場 Check in', time: '12:00', durationHours: 2, durationMinutes: 0, category: '交通', notes: '準備登機' }
+            { id: 207, dateId: 'd2', name: 'City Walk (夜)', time: '19:00', durationHours: 4, durationMinutes: 0, category: '景點', notes: '晚餐與逛街。注意末班車回尖沙咀 00:54' },
+
+            // Day 3: 3/8
+            { id: 301, dateId: 'd3', name: '買蛋塔 (早起)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', notes: 'Bakehouse / 蛋塔，準備帶回台灣' },
+            { id: 302, dateId: 'd3', name: '前往機場', time: '11:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
+            { id: 303, dateId: 'd3', name: '機場 Check in', time: '12:00', durationHours: 2, durationMinutes: 0, category: '交通', notes: '抵達機場辦理登機' }
         ],
         flights: [
-            { id: 1, code: '去程', depCity: 'TPE (T1)', arrCity: 'HKG (T1)', depTime: '08:00', arrTime: '10:10' },
-            { id: 2, code: '回程', depCity: 'HKG (T1)', arrCity: 'TPE (T1)', depTime: '14:05', arrTime: '15:50' }
+            { id: 1, code: '星宇 JX233', depCity: 'TPE (T1)', arrCity: 'HKG (T1)', depTime: '08:00', arrTime: '10:10' },
+            { id: 2, code: '華航 CI910', depCity: 'HKG (T1)', arrCity: 'TPE (T1)', depTime: '14:05', arrTime: '15:50' }
         ],
         hotels: [
-            { id: 1, name: '迪士尼好來塢酒店', checkIn: '2024-03-06', checkOut: '2024-03-07' },
-            { id: 2, name: '金域假日酒店', checkIn: '2024-03-07', checkOut: '2024-03-09' }
+            { id: 1, name: '迪士尼好萊塢酒店', checkIn: '2026-03-06', checkOut: '2026-03-07' },
+            { id: 2, name: '金域假日酒店', checkIn: '2026-03-07', checkOut: '2026-03-08' }
         ],
         food: [
-            { id: 101, name: '澳洲牛奶公司', region: '佐敦', info: '必點炒蛋多士', notes: '排隊人潮多，建議早去' },
-            { id: 102, name: '甘牌燒鵝', region: '灣仔', info: '米其林一星', notes: '燒鵝必吃，外帶比較快' },
-            { id: 103, name: '九記牛腩', region: '中環', info: '清湯牛腩', notes: '只收現金' },
-            { id: 104, name: '蘭芳園', region: '中環', info: '絲襪奶茶始祖', notes: '必點豬扒包' }
+            // Mong Kok
+            { id: 101, region: '旺角', name: '佳佳甜品', info: '甜品', notes: '' },
+            // Yau Ma Tei
+            { id: 201, region: '油麻地', name: '通達食店', info: '小吃', notes: '' },
+            { id: 202, region: '油麻地', name: '紅茶冰室', info: '茶餐廳', notes: '' },
+            { id: 203, region: '油麻地', name: '大安茶冰廳', info: '懷舊冰室', notes: '' },
+            // Jordan
+            { id: 301, region: '佐敦', name: '澳洲牛奶公司', info: '炒蛋多士', notes: '排隊名店' },
+            { id: 302, region: '佐敦', name: '麥文記麵家', info: '雲吞麵', notes: '' },
+            // TST
+            { id: 401, region: '尖沙咀', name: '旺記冰室', info: '茶餐廳', notes: '' },
+            { id: 402, region: '尖沙咀', name: '九爺牛腩', info: '牛腩麵', notes: '' },
+            { id: 403, region: '尖沙咀', name: 'Bakehouse', info: '蛋塔', notes: '必買伴手禮' },
+            { id: 404, region: '尖沙咀', name: '祥興記上海生煎包', info: '生煎包', notes: '米其中推薦' },
+            { id: 405, region: '尖沙咀', name: '旗子燒鵝', info: '燒鵝', notes: '' },
+            { id: 406, region: '尖沙咀', name: '華嫂冰室', info: '冰室', notes: '余文樂愛店' },
+            { id: 407, region: '尖沙咀', name: '肥仔記麵家', info: '麵食', notes: '' },
+            { id: 408, region: '尖沙咀', name: '阿一檸檬茶', info: '手搖飲', notes: '' },
+            { id: 409, region: '尖沙咀', name: 'Hashtag B', info: '麵包/蛋塔', notes: '' },
+            { id: 410, region: '尖沙咀', name: "Owl's", info: '舒芙蕾/甜點', notes: '' },
+            { id: 411, region: '尖沙咀', name: 'Choux Pastry', info: '泡芙', notes: '' },
+            { id: 412, region: '尖沙咀', name: '媽咪雞蛋仔', info: '雞蛋仔', notes: '米其林推薦' },
+            { id: 413, region: '尖沙咀', name: '珍妮曲奇小熊', info: '曲奇餅', notes: '聰明小熊' },
+            { id: 414, region: '尖沙咀', name: 'ChaTraMue', info: '泰式奶茶', notes: '' },
+            { id: 415, region: '尖沙咀', name: '富豪雪糕', info: '流動雪糕車', notes: '可遇不可求' },
+            // Wan Chai
+            { id: 501, region: '灣仔', name: 'C Dessert', info: '甜品', notes: '' },
+            { id: 502, region: '灣仔', name: '竺扶大班燒味', info: '燒味', notes: '' },
+            // Central
+            { id: 601, region: '中環', name: '一樂燒鵝', info: '燒鵝', notes: '米其林一星' },
+            { id: 602, region: '中環', name: '蘭桂坊', info: '酒吧區', notes: '夜生活' },
+            { id: 603, region: '中環', name: 'Vission Bakery', info: '麵包', notes: '' },
+            { id: 604, region: '中環', name: 'J.Co Donuts', info: '甜甜圈', notes: '' },
+            // Kennedy Town
+            { id: 701, region: '堅尼地城', name: '%Arabica', info: '咖啡', notes: '海邊咖啡' }
+        ],
+        shopping: [
+            { id: 101, region: '旺角', name: '朗豪坊', info: '大型商場', notes: '' },
+            { id: 102, region: '旺角', name: '80M巴士專門店', info: '模型', notes: '' },
+            { id: 103, region: '旺角', name: '女人街', info: '露天市集', notes: '' },
+            { id: 104, region: '旺角', name: '波鞋街', info: '運動鞋', notes: '' },
+            { id: 105, region: '旺角', name: '金魚街', info: '特色街道', notes: '' },
+            { id: 201, region: '油麻地', name: '天后廟', info: '古蹟/景點', notes: '' },
+            { id: 301, region: '尖沙咀', name: '海運大廈', info: '購物中心', notes: '海港城' },
+            { id: 302, region: '尖沙咀', name: '維多利亞港', info: '景點', notes: '夜景' },
+            { id: 303, region: '尖沙咀', name: 'K11', info: '藝術商場', notes: '' },
+            { id: 304, region: '尖沙咀', name: '前九廣鐵路鐘樓', info: '地標', notes: '' },
+            { id: 305, region: '尖沙咀', name: '錦繡唐朝', info: '紀念品', notes: '' },
+            { id: 306, region: '尖沙咀', name: '星光大道', info: '景點', notes: '' },
+            { id: 401, region: '灣仔', name: '鴻興玩具', info: '玩具店', notes: '' },
+            { id: 501, region: '中環', name: '中環街市', info: '活化市集', notes: '' },
+            { id: 502, region: '中環', name: '半山扶手電梯', info: '景點', notes: '重慶森林場景' }
         ]
     };
 
@@ -541,7 +584,7 @@
             // State
             const isMenuOpen = ref(false);
             const isEditMode = ref(false);
-            const activeTab = ref('info'); // 預設顯示資訊頁
+            const activeTab = ref('info');
             const showEditModal = ref(false);
             const showDetailModal = ref(false);
             const showRangeModal = ref(false);
@@ -554,16 +597,16 @@
             const selectedItem = ref(null);
             const listType = ref('');
 
-            // Data Persistence (v18)
-            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v18') || '{"start":"2024-03-06","end":"2024-03-09"}'));
-            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v18') || JSON.stringify(initData.dates)));
-            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v18') || JSON.stringify(initData.itinerary)));
-            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v18') || JSON.stringify(initData.flights)));
-            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v18') || JSON.stringify(initData.hotels)));
-            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v18') || '[]'));
-            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v18') || JSON.stringify(initData.food)));
-            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v18') || '[]'));
-            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v18') || '[]'));
+            // Data Persistence (v19) - Forces new data load
+            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v19') || '{"start":"2026-03-06","end":"2026-03-08"}'));
+            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v19') || JSON.stringify(initData.dates)));
+            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v19') || JSON.stringify(initData.itinerary)));
+            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v19') || JSON.stringify(initData.flights)));
+            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v19') || JSON.stringify(initData.hotels)));
+            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v19') || JSON.stringify(initData.shopping)));
+            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v19') || JSON.stringify(initData.food)));
+            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v19') || '[]'));
+            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v19') || '[]'));
 
             const activeDateId = ref(tripDates.value[0]?.id || 'd1');
             const tempRange = ref({ ...tripRange.value });
@@ -633,15 +676,15 @@
             });
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v18', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v18', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v18', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v18', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v18', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v18', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v18', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v18', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v18', JSON.stringify(expenseList.value));
+                localStorage.setItem('hk_range_v19', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v19', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v19', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v19', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v19', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v19', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v19', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v19', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v19', JSON.stringify(expenseList.value));
             }, { deep: true });
 
             const applyDateRange = () => {
@@ -695,8 +738,8 @@
                         isNewItem.value = false;
                         newItem.value = { ...item };
                         showEditModal.value = true;
-                    } else if (activeTab.value === 'food') {
-                        openListModal('food', item);
+                    } else if (activeTab.value === 'food' || activeTab.value === 'shopping') {
+                        openListModal(activeTab.value, item);
                     }
                 } else {
                     selectedItem.value = item;
