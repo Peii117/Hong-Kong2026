@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 行程助手</title>
+    <title>香港之旅 - 3/6~3/8 行程助手 (MTR Color Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -24,7 +24,6 @@
         .nav-shadow { box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
         .card-transition { transition: all 0.2s ease; }
 
-        /* Sidebar Transition */
         .sidebar-enter-active, .sidebar-leave-active { transition: transform 0.3s ease; }
         .sidebar-enter-from, .sidebar-leave-to { transform: translateX(-100%); }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
@@ -92,7 +91,7 @@
                     </li>
                 </ul>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.1</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Trip Helper v3.2</div>
         </aside>
     </transition>
 
@@ -174,7 +173,7 @@
                 <div v-if="currentItinerary.length > 0" class="space-y-3">
                     <article v-for="item in currentItinerary" :key="item.id" 
                          @click="handleItemClick(item)"
-                         :class="[getStyles(item.category).border, getStyles(item.category).shadow]"
+                         :class="[getStyles(item.category, item.region).border, getStyles(item.category, item.region).shadow]"
                          class="p-5 bg-white border border-gray-100 rounded-[1.8rem] border-l-[6px] flex justify-between items-center card-transition active:scale-[0.97] cursor-pointer shadow-sm">
                         
                         <div class="flex-1 pr-3">
@@ -191,8 +190,8 @@
                         </div>
 
                         <div class="flex flex-col items-end space-y-2">
-                            <span :class="getStyles(item.category).bg" 
-                                  class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider text-white border shadow-sm uppercase">
+                            <span :class="getStyles(item.category, item.region).bg" 
+                                  class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider border shadow-sm uppercase">
                                 {{ item.category }}
                             </span>
                             <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
@@ -225,7 +224,11 @@
                 <div class="flex-1">
                     <h3 class="font-bold text-gray-800" :class="item.checked ? 'line-through' : ''">{{ item.name }}</h3>
                     <div class="flex items-center mt-1 space-x-2">
-                        <span v-if="item.region" class="text-[9px] bg-pink-50 text-pink-500 px-2 py-0.5 rounded-md font-bold">{{ item.region }}</span>
+                        <span v-if="item.region" 
+                              :class="getStyles('景點', item.region).bg"
+                              class="text-[9px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
+                            {{ item.region }}
+                        </span>
                         <p class="text-xs text-gray-400 font-medium">{{ item.info || ' ' }}</p>
                     </div>
                 </div>
@@ -243,7 +246,7 @@
         <section v-if="activeTab === 'food'" class="scale-in-center space-y-4">
             <div v-if="isEditMode" class="mb-4">
                 <button @click="openListModal('food')" class="w-full py-4 border-2 border-dashed border-orange-200 rounded-3xl text-orange-500 text-sm font-bold bg-orange-50/30">
-                    <i class="fas fa-utensils mr-2"></i>新增美食
+                    <i class="fas fa-utensils mr-2"></i>新增美食名單
                 </button>
             </div>
             <div v-for="item in foodList" :key="item.id" 
@@ -252,7 +255,11 @@
                 <div class="flex-1">
                     <h3 class="font-bold text-gray-800 text-lg">{{ item.name }}</h3>
                     <div class="flex items-center mt-1 space-x-2">
-                        <span v-if="item.region" class="text-[9px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-md font-black tracking-wider uppercase">{{ item.region }}</span>
+                        <span v-if="item.region" 
+                              :class="getStyles('美食', item.region).bg"
+                              class="text-[9px] px-2 py-0.5 rounded-md font-black tracking-wider uppercase">
+                            {{ item.region }}
+                        </span>
                         <p class="text-xs text-gray-400">{{ item.info }}</p>
                     </div>
                 </div>
@@ -319,6 +326,8 @@
             <h2 class="text-2xl font-black mb-8">{{ isNewItem ? '新增行程' : '修改行程' }}</h2>
             <div class="space-y-6">
                 <input v-model="newItem.name" placeholder="景點名稱..." class="w-full border-b-2 border-gray-100 p-2.5 text-lg font-bold outline-none focus:border-royal-blue bg-transparent">
+                <input v-model="newItem.region" placeholder="地區 (自動變色，如: 旺角, 迪士尼...)" class="w-full border-b-2 border-gray-100 p-2.5 text-sm font-bold outline-none focus:border-royal-blue bg-transparent">
+                
                 <div class="grid grid-cols-2 gap-6">
                     <input v-model="newItem.time" type="time" class="w-full border-b-2 border-gray-100 p-2.5 outline-none font-bold">
                     <select v-model="newItem.category" class="w-full border-b-2 border-gray-100 p-2.5 outline-none font-bold">
@@ -480,15 +489,29 @@
 <script>
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
+    // 分類基礎樣式
     const categoryConfig = {
-        '景點': { bg: 'bg-blue-600 border-blue-700', border: 'border-blue-600', shadow: 'shadow-blue-50' },
-        '美食': { bg: 'bg-orange-500 border-orange-600', border: 'border-orange-500', shadow: 'shadow-orange-50' },
-        '交通': { bg: 'bg-emerald-500 border-emerald-600', border: 'border-emerald-500', shadow: 'shadow-emerald-50' },
-        '購物': { bg: 'bg-pink-500 border-pink-600', border: 'border-pink-500', shadow: 'shadow-pink-50' },
-        '住宿': { bg: 'bg-indigo-500 border-indigo-600', border: 'border-indigo-500', shadow: 'shadow-indigo-50' }
+        '景點': { bg: 'bg-blue-600 border-blue-700 text-white', border: 'border-blue-600', shadow: 'shadow-blue-50' },
+        '美食': { bg: 'bg-orange-500 border-orange-600 text-white', border: 'border-orange-500', shadow: 'shadow-orange-50' },
+        '交通': { bg: 'bg-emerald-500 border-emerald-600 text-white', border: 'border-emerald-500', shadow: 'shadow-emerald-50' },
+        '購物': { bg: 'bg-pink-500 border-pink-600 text-white', border: 'border-pink-500', shadow: 'shadow-pink-50' },
+        '住宿': { bg: 'bg-indigo-500 border-indigo-600 text-white', border: 'border-indigo-500', shadow: 'shadow-indigo-50' }
     };
 
-    // Initial Data based on user request
+    // MTR & Region 顏色對照表
+    const mtrColors = {
+        '旺角': { bg: 'bg-red-600 text-white', border: 'border-red-700', shadow: 'shadow-red-50' }, // 荃灣線紅
+        '油麻地': { bg: 'bg-stone-400 text-white', border: 'border-stone-500', shadow: 'shadow-stone-50' }, 
+        '佐敦': { bg: 'bg-emerald-400 text-white', border: 'border-emerald-500', shadow: 'shadow-emerald-50' },
+        '尖沙咀': { bg: 'bg-yellow-500 text-black', border: 'border-yellow-600', shadow: 'shadow-yellow-50' },
+        '灣仔': { bg: 'bg-lime-500 text-white', border: 'border-lime-600', shadow: 'shadow-lime-50' },
+        '中環': { bg: 'bg-rose-600 text-white', border: 'border-rose-700', shadow: 'shadow-rose-50' },
+        '堅尼地城': { bg: 'bg-cyan-400 text-white', border: 'border-cyan-500', shadow: 'shadow-cyan-50' },
+        '迪士尼': { bg: 'bg-pink-500 text-white', border: 'border-pink-600', shadow: 'shadow-pink-50' },
+        '欣澳': { bg: 'bg-slate-500 text-white', border: 'border-slate-600', shadow: 'shadow-slate-50' },
+        '機場': { bg: 'bg-teal-600 text-white', border: 'border-teal-700', shadow: 'shadow-teal-50' }
+    };
+
     const initData = {
         dates: [
             {id:'d1', fullDate:'2026-03-06'},
@@ -496,24 +519,21 @@
             {id:'d3', fullDate:'2026-03-08'}
         ],
         itinerary: [
-            // Day 1: 3/6
-            { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', notes: '搭計程車到飯店，車程約30min，約150港幣 (台幣約610)' },
-            { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '寄放行李，搭接駁車前往樂園 (步行為15-20min)' },
-            { id: 103, dateId: 'd1', name: '迪士尼樂園', time: '13:00', durationHours: 9, durationMinutes: 0, category: '景點', notes: '盡情遊玩！結束後搭接駁車回飯店' },
+            { id: 101, dateId: 'd1', name: '香港機場抵達', time: '11:40', durationHours: 0, durationMinutes: 40, category: '交通', region: '機場', notes: '搭計程車到飯店，車程約30min，約150港幣 (台幣約610)' },
+            { id: 102, dateId: 'd1', name: '迪士尼好萊塢酒店', time: '12:20', durationHours: 0, durationMinutes: 30, category: '住宿', region: '迪士尼', notes: '寄放行李，搭接駁車前往樂園 (步行為15-20min)' },
+            { id: 103, dateId: 'd1', name: '迪士尼樂園', time: '13:00', durationHours: 9, durationMinutes: 0, category: '景點', region: '迪士尼', notes: '盡情遊玩！結束後搭接駁車回飯店' },
             
-            // Day 2: 3/7
-            { id: 201, dateId: 'd2', name: '飯店 Check out', time: '09:30', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '前往地鐵迪士尼站 (10min)' },
-            { id: 202, dateId: 'd2', name: '地鐵轉乘', time: '10:00', durationHours: 1, durationMinutes: 0, category: '交通', notes: '迪士尼->欣澳(10min)->中環(25min)->尖沙咀(10min)' },
-            { id: 203, dateId: 'd2', name: '金域假日酒店', time: '11:00', durationHours: 0, durationMinutes: 30, category: '住宿', notes: '尖沙咀站 N5出口最近 / N1有電梯。從N1步行到酒店約2min。寄放行李。' },
-            { id: 204, dateId: 'd2', name: 'City Walk', time: '12:00', durationHours: 3, durationMinutes: 0, category: '景點', notes: '旺角 / 油麻地 / 尖沙咀 區域漫遊' },
-            { id: 205, dateId: 'd2', name: '飯店 Check in', time: '15:00', durationHours: 1, durationMinutes: 0, category: '住宿', notes: '回飯店休息' },
-            { id: 206, dateId: 'd2', name: '維多利亞港', time: '16:00', durationHours: 2, durationMinutes: 0, category: '景點', notes: '散步看夕陽' },
-            { id: 207, dateId: 'd2', name: 'City Walk (夜)', time: '19:00', durationHours: 4, durationMinutes: 0, category: '景點', notes: '晚餐與逛街。注意末班車回尖沙咀 00:54' },
+            { id: 201, dateId: 'd2', name: '飯店 Check out', time: '09:30', durationHours: 0, durationMinutes: 30, category: '住宿', region: '迪士尼', notes: '前往地鐵迪士尼站 (10min)' },
+            { id: 202, dateId: 'd2', name: '地鐵轉乘', time: '10:00', durationHours: 1, durationMinutes: 0, category: '交通', region: '', notes: '迪士尼->欣澳(10min)->中環(25min)->尖沙咀(10min)' },
+            { id: 203, dateId: 'd2', name: '金域假日酒店', time: '11:00', durationHours: 0, durationMinutes: 30, category: '住宿', region: '尖沙咀', notes: '尖沙咀站 N5出口最近 / N1有電梯。從N1步行到酒店約2min。寄放行李。' },
+            { id: 204, dateId: 'd2', name: 'City Walk', time: '12:00', durationHours: 3, durationMinutes: 0, category: '景點', region: '旺角', notes: '旺角 / 油麻地 / 尖沙咀 區域漫遊' },
+            { id: 205, dateId: 'd2', name: '飯店 Check in', time: '15:00', durationHours: 1, durationMinutes: 0, category: '住宿', region: '尖沙咀', notes: '回飯店休息' },
+            { id: 206, dateId: 'd2', name: '維多利亞港', time: '16:00', durationHours: 2, durationMinutes: 0, category: '景點', region: '尖沙咀', notes: '散步看夕陽' },
+            { id: 207, dateId: 'd2', name: 'City Walk (夜)', time: '19:00', durationHours: 4, durationMinutes: 0, category: '景點', region: '尖沙咀', notes: '晚餐與逛街。注意末班車回尖沙咀 00:54' },
 
-            // Day 3: 3/8
-            { id: 301, dateId: 'd3', name: '買蛋塔 (早起)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', notes: 'Bakehouse / 蛋塔，準備帶回台灣' },
-            { id: 302, dateId: 'd3', name: '前往機場', time: '10:30', durationHours: 1, durationMinutes: 0, category: '交通', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
-            { id: 303, dateId: 'd3', name: '抵達機場 Check in', time: '11:30', durationHours: 2, durationMinutes: 0, category: '交通', notes: '抵達機場辦理登機' }
+            { id: 301, dateId: 'd3', name: '買蛋塔 (早起)', time: '09:00', durationHours: 1, durationMinutes: 0, category: '美食', region: '尖沙咀', notes: 'Bakehouse / 蛋塔，準備帶回台灣' },
+            { id: 302, dateId: 'd3', name: '前往機場', time: '10:30', durationHours: 1, durationMinutes: 0, category: '交通', region: '', notes: '尖沙咀->中環(10min) -> 機場快綫香港站->機場(25min)' },
+            { id: 303, dateId: 'd3', name: '抵達機場 Check in', time: '11:30', durationHours: 2, durationMinutes: 0, category: '交通', region: '機場', notes: '抵達機場辦理登機' }
         ],
         flights: [
             { id: 1, code: '星宇 JX233', depCity: 'TPE (T1)', arrCity: 'HKG (T1)', depTime: '08:00', arrTime: '10:10' },
@@ -524,16 +544,12 @@
             { id: 2, name: '金域假日酒店', checkIn: '2026-03-07', checkOut: '2026-03-08' }
         ],
         food: [
-            // Mong Kok
             { id: 101, region: '旺角', name: '佳佳甜品', info: '甜品', notes: '' },
-            // Yau Ma Tei
             { id: 201, region: '油麻地', name: '通達食店', info: '小吃', notes: '' },
             { id: 202, region: '油麻地', name: '紅茶冰室', info: '茶餐廳', notes: '' },
             { id: 203, region: '油麻地', name: '大安茶冰廳', info: '懷舊冰室', notes: '' },
-            // Jordan
             { id: 301, region: '佐敦', name: '澳洲牛奶公司', info: '炒蛋多士', notes: '排隊名店' },
             { id: 302, region: '佐敦', name: '麥文記麵家', info: '雲吞麵', notes: '' },
-            // TST
             { id: 401, region: '尖沙咀', name: '旺記冰室', info: '茶餐廳', notes: '' },
             { id: 402, region: '尖沙咀', name: '九爺牛腩', info: '牛腩麵', notes: '' },
             { id: 403, region: '尖沙咀', name: 'Bakehouse', info: '蛋塔', notes: '必買伴手禮' },
@@ -549,15 +565,12 @@
             { id: 413, region: '尖沙咀', name: '珍妮曲奇小熊', info: '曲奇餅', notes: '聰明小熊' },
             { id: 414, region: '尖沙咀', name: 'ChaTraMue', info: '泰式奶茶', notes: '' },
             { id: 415, region: '尖沙咀', name: '富豪雪糕', info: '流動雪糕車', notes: '可遇不可求' },
-            // Wan Chai
             { id: 501, region: '灣仔', name: 'C Dessert', info: '甜品', notes: '' },
             { id: 502, region: '灣仔', name: '竺扶大班燒味', info: '燒味', notes: '' },
-            // Central
             { id: 601, region: '中環', name: '一樂燒鵝', info: '燒鵝', notes: '米其林一星' },
             { id: 602, region: '中環', name: '蘭桂坊', info: '酒吧區', notes: '夜生活' },
             { id: 603, region: '中環', name: 'Vission Bakery', info: '麵包', notes: '' },
             { id: 604, region: '中環', name: 'J.Co Donuts', info: '甜甜圈', notes: '' },
-            // Kennedy Town
             { id: 701, region: '堅尼地城', name: '%Arabica', info: '咖啡', notes: '海邊咖啡' }
         ],
         shopping: [
@@ -581,7 +594,6 @@
 
     createApp({
         setup() {
-            // State
             const isMenuOpen = ref(false);
             const isEditMode = ref(false);
             const activeTab = ref('info');
@@ -597,16 +609,16 @@
             const selectedItem = ref(null);
             const listType = ref('');
 
-            // Data Persistence (v20) - Forces new data load
-            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v20') || '{"start":"2026-03-06","end":"2026-03-08"}'));
-            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v20') || JSON.stringify(initData.dates)));
-            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v20') || JSON.stringify(initData.itinerary)));
-            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v20') || JSON.stringify(initData.flights)));
-            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v20') || JSON.stringify(initData.hotels)));
-            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v20') || JSON.stringify(initData.shopping)));
-            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v20') || JSON.stringify(initData.food)));
-            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v20') || '[]'));
-            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v20') || '[]'));
+            // Version v21
+            const tripRange = ref(JSON.parse(localStorage.getItem('hk_range_v21') || '{"start":"2026-03-06","end":"2026-03-08"}'));
+            const tripDates = ref(JSON.parse(localStorage.getItem('hk_dates_v21') || JSON.stringify(initData.dates)));
+            const itineraryList = ref(JSON.parse(localStorage.getItem('hk_itinerary_v21') || JSON.stringify(initData.itinerary)));
+            const flights = ref(JSON.parse(localStorage.getItem('hk_flights_v21') || JSON.stringify(initData.flights)));
+            const hotels = ref(JSON.parse(localStorage.getItem('hk_hotels_v21') || JSON.stringify(initData.hotels)));
+            const shoppingList = ref(JSON.parse(localStorage.getItem('hk_shopping_v21') || JSON.stringify(initData.shopping)));
+            const foodList = ref(JSON.parse(localStorage.getItem('hk_food_v21') || JSON.stringify(initData.food)));
+            const generalInfoList = ref(JSON.parse(localStorage.getItem('hk_general_v21') || '[]'));
+            const expenseList = ref(JSON.parse(localStorage.getItem('hk_expense_v21') || '[]'));
 
             const activeDateId = ref(tripDates.value[0]?.id || 'd1');
             const tempRange = ref({ ...tripRange.value });
@@ -615,15 +627,13 @@
             const exchangeRate = ref('--');
             const payers = ['沛晴', '芳晨', '玟妤'];
 
-            // Models
-            const newItem = ref({ name: '', time: '09:00', category: '景點', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
+            const newItem = ref({ name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
             const newFlight = ref({ code: '', depCity: '', arrCity: '', depTime: '', arrTime: '' });
             const newHotel = ref({ name: '', address: '', checkIn: '', checkOut: '' });
             const newListEntry = ref({ id: '', name: '', region: '', info: '', notes: '', checked: false });
             const newGeneralInfo = ref({ title: '', content: '' });
             const newExpense = ref({ item: '', amount: '', currency: 'HKD', payer: '沛晴', date: new Date().toISOString() });
 
-            // Updated Menus Order
             const menus = [
                 { tab: 'info', name: '資訊', icon: 'fas fa-info-circle' },
                 { tab: 'itinerary', name: '行程', icon: 'fas fa-map-marked-alt' },
@@ -636,7 +646,6 @@
             const currentDayNumber = computed(() => tripDates.value.findIndex(d => d.id === activeDateId.value) + 1);
             const currentItinerary = computed(() => itineraryList.value.filter(i => i.dateId === activeDateId.value).sort((a,b) => a.time.localeCompare(b.time)));
             
-            // Expense Computed
             const totalExpenseHKD = computed(() => expenseList.value.filter(e => e.currency === 'HKD').reduce((acc, cur) => acc + Number(cur.amount), 0));
             const totalExpenseTWD = computed(() => expenseList.value.filter(e => e.currency === 'TWD').reduce((acc, cur) => acc + Number(cur.amount), 0));
 
@@ -676,15 +685,15 @@
             });
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v20', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v20', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v20', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v20', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v20', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v20', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v20', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v20', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v20', JSON.stringify(expenseList.value));
+                localStorage.setItem('hk_range_v21', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v21', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v21', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v21', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v21', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v21', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v21', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v21', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v21', JSON.stringify(expenseList.value));
             }, { deep: true });
 
             const applyDateRange = () => {
@@ -706,7 +715,7 @@
 
             const openAddModal = () => {
                 isNewItem.value = true;
-                newItem.value = { id: Date.now(), name: '', time: '09:00', category: '景點', notes: '', dateId: activeDateId.value, durationHours: 1, durationMinutes: 0 };
+                newItem.value = { id: Date.now(), name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: activeDateId.value, durationHours: 1, durationMinutes: 0 };
                 showEditModal.value = true;
             };
 
@@ -807,7 +816,13 @@
                 return (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getDate().toString().padStart(2, '0');
             };
 
-            const getStyles = (cat) => categoryConfig[cat] || categoryConfig['景點'];
+            const getStyles = (cat, region) => {
+                if (region && mtrColors[region]) {
+                    return mtrColors[region];
+                }
+                return categoryConfig[cat] || categoryConfig['景點'];
+            };
+            
             const getPayerColor = (p) => ({ '沛晴': 'bg-pink-400', '芳晨': 'bg-purple-400', '玟妤': 'bg-blue-400' }[p] || 'bg-gray-400');
 
             return {
