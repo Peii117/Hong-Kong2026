@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 (雲端同步版)</title>
+    <title>香港之旅 - 3/6~3/8 (修復版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -48,9 +48,9 @@
                     <p class="text-[10px] font-bold text-emerald-600">
                         匯率: 1 HKD ≈ {{ exchangeRate }} TWD
                     </p>
-                    <p class="text-[9px] text-blue-500 font-bold flex items-center mt-0.5">
-                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1" :class="isSyncing ? 'animate-ping' : ''"></span> 
-                        {{ isSyncing ? '同步中...' : '已連線' }}
+                    <p class="text-[9px] font-bold flex items-center mt-0.5" :class="dbConnected ? 'text-blue-500' : 'text-gray-400'">
+                        <span class="w-1.5 h-1.5 rounded-full mr-1" :class="[dbConnected ? 'bg-blue-500' : 'bg-gray-400', isSyncing ? 'animate-ping' : '']"></span> 
+                        {{ dbConnected ? (isSyncing ? '同步中...' : '已連線') : '離線模式' }}
                     </p>
                 </div>
             </div>
@@ -103,10 +103,10 @@
                     <button @click="resetToDefault" class="w-full py-3 border-2 border-red-100 text-red-400 rounded-xl text-xs font-bold flex items-center justify-center hover:bg-red-50 transition-colors">
                         <i class="fas fa-undo mr-2"></i> 匯入預設行程 (3/6-3/8)
                     </button>
-                    <p class="text-[10px] text-gray-400 text-center">若畫面空白，請點擊上方按鈕匯入資料</p>
+                    <p class="text-[10px] text-gray-400 text-center">如果行程是空的，請點此按鈕</p>
                 </div>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Cloud Sync v24</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Safe Mode v25</div>
         </aside>
     </transition>
 
@@ -452,7 +452,7 @@
 </div>
 
 <script>
-    // --- Firebase Setup ---
+    // --- Firebase Setup (Integrated) ---
     const firebaseConfig = {
         apiKey: "AIzaSyD1pbRlGwZMMle7cGo7lFlcCqp5M_4vhbg",
         authDomain: "hk2026-6cda5.firebaseapp.com",
@@ -463,8 +463,18 @@
         appId: "1:291705132256:web:beb036becf6426f2bcac85",
         measurementId: "G-YKNDXB99W6"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+
+    let db = null;
+    try {
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } else {
+            console.error("Firebase SDK not loaded.");
+        }
+    } catch (e) {
+        console.error("Firebase init error:", e);
+    }
 
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
@@ -489,7 +499,6 @@
         '機場': { bg: 'bg-teal-600 text-white', border: 'border-teal-700', shadow: 'shadow-teal-50' }
     };
 
-    // 預設資料 (3/6 - 3/8)
     const initData = {
         dates: [{id:'d1', fullDate:'2026-03-06'}, {id:'d2', fullDate:'2026-03-07'}, {id:'d3', fullDate:'2026-03-08'}],
         itinerary: [
@@ -566,6 +575,16 @@
 
     createApp({
         setup() {
+            // Helper for Safe Parsing
+            const safeJSONParse = (key, fallback) => {
+                try {
+                    const item = localStorage.getItem(key);
+                    return item ? JSON.parse(item) : fallback;
+                } catch (e) {
+                    return fallback;
+                }
+            };
+
             // State
             const isMenuOpen = ref(false);
             const isEditMode = ref(false);
@@ -582,20 +601,21 @@
             const selectedItem = ref(null);
             const listType = ref('');
             const isSyncing = ref(false);
+            const dbConnected = ref(false);
             
-            // Reactive Data Containers
-            const tripRange = ref({ start: '', end: '' });
-            const tripDates = ref([]);
-            const itineraryList = ref([]);
-            const flights = ref([]);
-            const hotels = ref([]);
-            const shoppingList = ref([]);
-            const foodList = ref([]);
-            const generalInfoList = ref([]);
-            const expenseList = ref([]);
+            // Data Containers (Init from safe local or default)
+            const tripRange = ref(safeJSONParse('hk_range_v25', { start: '2026-03-06', end: '2026-03-08' }));
+            const tripDates = ref(safeJSONParse('hk_dates_v25', initData.dates));
+            const itineraryList = ref(safeJSONParse('hk_itinerary_v25', initData.itinerary));
+            const flights = ref(safeJSONParse('hk_flights_v25', initData.flights));
+            const hotels = ref(safeJSONParse('hk_hotels_v25', initData.hotels));
+            const shoppingList = ref(safeJSONParse('hk_shopping_v25', initData.shopping));
+            const foodList = ref(safeJSONParse('hk_food_v25', initData.food));
+            const generalInfoList = ref(safeJSONParse('hk_general_v25', []));
+            const expenseList = ref(safeJSONParse('hk_expense_v25', []));
 
             const activeDateId = ref('d1');
-            const tempRange = ref({ start: '', end: '' });
+            const tempRange = ref({ ...tripRange.value });
             
             const weather = ref({ temp: '--', desc: '載入中...', humidity: '--', iconUrl: '' });
             const exchangeRate = ref('--');
@@ -607,6 +627,7 @@
             let isRemoteUpdate = false; 
 
             onMounted(() => {
+                // Initialize Trip ID
                 if (window.location.hash && window.location.hash.length > 1) {
                     tripId.value = window.location.hash.substring(1);
                 } else {
@@ -614,39 +635,51 @@
                     window.location.hash = tripId.value;
                 }
 
-                dbRef = db.ref('trips/' + tripId.value);
+                // Try to connect to Firebase
+                if (db) {
+                    try {
+                        dbRef = db.ref('trips/' + tripId.value);
+                        dbRef.on('value', (snapshot) => {
+                            dbConnected.value = true;
+                            const data = snapshot.val();
+                            isSyncing.value = true;
+                            isRemoteUpdate = true;
 
-                dbRef.on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    isSyncing.value = true;
-                    isRemoteUpdate = true;
-
-                    if (data) {
-                        tripRange.value = data.range || { start: '', end: '' };
-                        tripDates.value = data.dates || [];
-                        itineraryList.value = data.itinerary || [];
-                        flights.value = data.flights || [];
-                        hotels.value = data.hotels || [];
-                        shoppingList.value = data.shopping || [];
-                        foodList.value = data.food || [];
-                        generalInfoList.value = data.general || [];
-                        expenseList.value = data.expense || [];
-                        
-                        if (!activeDateId.value && tripDates.value.length > 0) {
-                            activeDateId.value = tripDates.value[0].id;
-                        }
-                    } else {
-                        // Empty room? Wait for user to click Reset or Start Fresh
+                            if (data) {
+                                // Load from Cloud
+                                tripRange.value = data.range || { start: '', end: '' };
+                                tripDates.value = data.dates || [];
+                                itineraryList.value = data.itinerary || [];
+                                flights.value = data.flights || [];
+                                hotels.value = data.hotels || [];
+                                shoppingList.value = data.shopping || [];
+                                foodList.value = data.food || [];
+                                generalInfoList.value = data.general || [];
+                                expenseList.value = data.expense || [];
+                                
+                                if (!activeDateId.value && tripDates.value.length > 0) {
+                                    activeDateId.value = tripDates.value[0].id;
+                                }
+                            } else {
+                                // Cloud empty? We have local defaults, push them?
+                                // Optional: pushDefaultsToCloud();
+                            }
+                            setTimeout(() => { isSyncing.value = false; isRemoteUpdate = false; }, 500);
+                        }, (error) => {
+                            console.error("Firebase Read Error:", error);
+                            dbConnected.value = false;
+                        });
+                    } catch(e) {
+                        console.error("Firebase logic failed:", e);
                     }
-                    setTimeout(() => { isSyncing.value = false; isRemoteUpdate = false; }, 500);
-                });
+                }
 
                 fetchWeather();
                 fetchRate();
             });
 
             const updateFirebase = () => {
-                if (isRemoteUpdate) return;
+                if (isRemoteUpdate || !db || !dbRef) return;
                 isSyncing.value = true;
                 dbRef.set({
                     range: tripRange.value,
@@ -660,10 +693,13 @@
                     expense: expenseList.value
                 }).then(() => {
                     setTimeout(() => isSyncing.value = false, 500);
+                }).catch(e => {
+                    console.error("Sync failed:", e);
+                    isSyncing.value = false;
                 });
             };
 
-            // Reset Function
+            // Reset / Import Default Data
             const resetToDefault = () => {
                 if(confirm('這將會清空目前資料並載入「3/6 - 3/8」預設行程，確定嗎？')) {
                     tripRange.value = { start: '2026-03-06', end: '2026-03-08' };
@@ -676,15 +712,28 @@
                     generalInfoList.value = [];
                     expenseList.value = [];
                     activeDateId.value = 'd1';
-                    // Force update will be triggered by watchers
+                    alert("預設行程已匯入！");
                 }
             };
 
+            // Watchers for Persistence
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
+                // Local Storage Backup
+                localStorage.setItem('hk_range_v25', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v25', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v25', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v25', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v25', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v25', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v25', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v25', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v25', JSON.stringify(expenseList.value));
+                
+                // Cloud Sync
                 updateFirebase();
             }, { deep: true });
 
-            // ... (Helper methods same as before) ...
+            // Helper Methods
             const copyShareLink = () => {
                 const url = window.location.href;
                 navigator.clipboard.writeText(url).then(() => alert('連結已複製！傳給朋友即可分享行程'));
@@ -756,17 +805,29 @@
             const saveHotel = () => { hotels.value.push({ id: Date.now(), ...newHotel.value }); showHotelModal.value = false; };
             const saveGeneralInfo = () => { generalInfoList.value.push({ id: Date.now(), ...newGeneralInfo.value }); showGeneralInfoModal.value = false; };
             const saveExpense = () => { if(!newExpense.value.item) return; expenseList.value.push({ ...newExpense.value }); showExpenseModal.value = false; };
-            const deleteItem = (type, id) => { if(confirm('確定要刪除嗎？')) { if(type === 'itinerary') itineraryList.value = itineraryList.value.filter(i => i.id !== id); else if(type === 'flight') flights.value = flights.value.filter(f => f.id !== id); else if(type === 'hotel') hotels.value = hotels.value.filter(h => h.id !== id); else if(type === 'shopping') shoppingList.value = shoppingList.value.filter(s => s.id !== id); else if(type === 'food') foodList.value = foodList.value.filter(f => f.id !== id); else if(type === 'general') generalInfoList.value = generalInfoList.value.filter(g => g.id !== id); else if(type === 'expense') expenseList.value = expenseList.value.filter(e => e.id !== id); } };
+            
+            const deleteItem = (type, id) => {
+                if(confirm('確定要刪除嗎？')) {
+                    if(type === 'itinerary') itineraryList.value = itineraryList.value.filter(i => i.id !== id);
+                    else if(type === 'flight') flights.value = flights.value.filter(f => f.id !== id);
+                    else if(type === 'hotel') hotels.value = hotels.value.filter(h => h.id !== id);
+                    else if(type === 'shopping') shoppingList.value = shoppingList.value.filter(s => s.id !== id);
+                    else if(type === 'food') foodList.value = foodList.value.filter(f => f.id !== id);
+                    else if(type === 'general') generalInfoList.value = generalInfoList.value.filter(g => g.id !== id);
+                    else if(type === 'expense') expenseList.value = expenseList.value.filter(e => e.id !== id);
+                }
+            };
+
             const formatDate = (dateStr) => { if (!dateStr) return ''; const d = new Date(dateStr); return (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getDate().toString().padStart(2, '0'); };
             const getStyles = (cat, region) => { if (region && mtrColors[region]) { return mtrColors[region]; } return categoryConfig[cat] || categoryConfig['景點']; };
             const getPayerColor = (p) => ({ '沛晴': 'bg-pink-400', '芳晨': 'bg-purple-400', '玟妤': 'bg-blue-400' }[p] || 'bg-gray-400');
 
             return {
-                isMenuOpen, isEditMode, activeTab, menus, activeMenuName, tripRange, tripDates, activeDateId, isSyncing,
+                isMenuOpen, isEditMode, activeTab, menus, activeMenuName, tripRange, tripDates, activeDateId, isSyncing, dbConnected,
                 showRangeModal, showEditModal, showDetailModal, showFlightModal, showHotelModal, showListModal, showGeneralInfoModal, showExpenseModal,
                 tempRange, currentItinerary, currentDayNumber, isNewItem, newItem, selectedItem, categoryConfig, payers,
                 weather, exchangeRate, flights, hotels, shoppingList, foodList, generalInfoList, expenseList, totalExpenseHKD, totalExpenseTWD,
-                newFlight, newHotel, newListEntry, newGeneralInfo, newExpense, listType, dbConnected,
+                newFlight, newHotel, newListEntry, newGeneralInfo, newExpense, listType,
                 formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, openExpenseModal, handleItemClick, copyShareLink, resetToDefault,
                 saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, saveExpense, deleteItem, getStyles, getPayerColor
             };
