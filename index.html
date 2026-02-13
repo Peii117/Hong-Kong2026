@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 </title>
+    <title>2026香港之旅</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -88,7 +88,7 @@
     <transition name="sidebar">
         <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-64 bg-white z-50 shadow-2xl p-6 flex flex-col justify-between">
             <div>
-                <h2 class="text-2xl font-black text-gray-800 mb-8 px-2">香港之旅</h2>
+                <h2 class="text-2xl font-black text-gray-800 mb-8 px-2">2026香港之旅</h2>
                 <ul class="space-y-2">
                     <li v-for="menu in menus" :key="menu.tab" 
                         @click="activeTab = menu.tab; isMenuOpen = false"
@@ -111,7 +111,7 @@
                     </button>
                 </div>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Version 30 (Map Fixed)</div>
+            <div class="text-xs text-gray-300 text-center font-bold">v31 (Final)</div>
         </aside>
     </transition>
 
@@ -645,15 +645,15 @@
             const isSyncing = ref(false);
             const dbConnected = ref(false);
             
-            const tripRange = ref(safeJSONParse('hk_range_v29', { start: '2026-03-06', end: '2026-03-08' }));
-            const tripDates = ref(safeJSONParse('hk_dates_v29', initData.dates));
-            const itineraryList = ref(safeJSONParse('hk_itinerary_v29', initData.itinerary));
-            const flights = ref(safeJSONParse('hk_flights_v29', initData.flights));
-            const hotels = ref(safeJSONParse('hk_hotels_v29', initData.hotels));
-            const shoppingList = ref(safeJSONParse('hk_shopping_v29', initData.shopping));
-            const foodList = ref(safeJSONParse('hk_food_v29', initData.food));
-            const generalInfoList = ref(safeJSONParse('hk_general_v29', []));
-            const expenseList = ref(safeJSONParse('hk_expense_v29', []));
+            const tripRange = ref(safeJSONParse('hk_range_v30', { start: '2026-03-06', end: '2026-03-08' }));
+            const tripDates = ref(safeJSONParse('hk_dates_v30', initData.dates));
+            const itineraryList = ref(safeJSONParse('hk_itinerary_v30', initData.itinerary));
+            const flights = ref(safeJSONParse('hk_flights_v30', initData.flights));
+            const hotels = ref(safeJSONParse('hk_hotels_v30', initData.hotels));
+            const shoppingList = ref(safeJSONParse('hk_shopping_v30', initData.shopping));
+            const foodList = ref(safeJSONParse('hk_food_v30', initData.food));
+            const generalInfoList = ref(safeJSONParse('hk_general_v30', []));
+            const expenseList = ref(safeJSONParse('hk_expense_v30', []));
 
             const activeDateId = ref('d1');
             const tempRange = ref({ ...tripRange.value });
@@ -777,15 +777,15 @@
             };
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v29', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v29', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v29', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v29', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v29', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v29', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v29', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v29', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v29', JSON.stringify(expenseList.value));
+                localStorage.setItem('hk_range_v30', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v30', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v30', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v30', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v30', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v30', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v30', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v30', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v30', JSON.stringify(expenseList.value));
                 updateFirebase();
             }, { deep: true });
 
@@ -794,9 +794,11 @@
                 navigator.clipboard.writeText(url).then(() => alert('連結已複製！傳給朋友即可同步'));
             };
 
+            // 修正地圖連結函數
             const getMapUrl = (name, region) => {
+                // 產生正確的 HTTPS Google Maps 搜尋連結
                 const query = (region ? region + ' ' : '') + (name || '');
-                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
             };
 
             const newItem = ref({ name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
