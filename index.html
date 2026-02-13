@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 (修復版)</title>
+    <title>香港之旅 - 3/6~3/8 (地圖修復版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -106,7 +106,7 @@
                     <p class="text-[10px] text-gray-400 text-center">如果行程是空的，請點此按鈕</p>
                 </div>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Safe Mode v25</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Map Fix v26</div>
         </aside>
     </transition>
 
@@ -196,7 +196,7 @@
                         </div>
                         <div class="flex flex-col items-end space-y-2">
                             <span :class="getStyles(item.category, item.region).bg" class="w-16 py-1 text-center rounded-lg text-[10px] font-black tracking-wider border shadow-sm uppercase">{{ item.category }}</span>
-                            <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                            <a :href="getMapUrl(item.name, item.region)" target="_blank" @click.stop
                                class="w-16 py-1 flex items-center justify-center bg-gray-50 text-gray-500 rounded-lg text-[10px] font-bold border border-gray-200 active:bg-gray-200 transition-colors">
                                 <i class="fas fa-map-marked-alt mr-1"></i>地圖
                             </a>
@@ -226,7 +226,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="getMapUrl(item.name, item.region)" target="_blank" @click.stop
                        class="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100">
                         <i class="fas fa-location-arrow text-xs"></i>
                     </a>
@@ -253,7 +253,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.name)" target="_blank" @click.stop
+                    <a :href="getMapUrl(item.name, item.region)" target="_blank" @click.stop
                        class="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-full active:bg-gray-100 transition-colors">
                         <i class="fas fa-location-arrow"></i>
                     </a>
@@ -428,7 +428,7 @@
                 <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ selectedItem?.notes }}</p>
             </div>
             <div class="flex flex-col space-y-4">
-                <a :href="'http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=' + encodeURIComponent(selectedItem?.name)" target="_blank" 
+                <a :href="getMapUrl(selectedItem?.name, selectedItem?.region)" target="_blank" 
                    class="block w-full py-4 bg-royal-blue text-white rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all">
                     <i class="fas fa-location-arrow mr-2"></i>開始地圖導航
                 </a>
@@ -603,16 +603,16 @@
             const isSyncing = ref(false);
             const dbConnected = ref(false);
             
-            // Data Containers (Init from safe local or default)
-            const tripRange = ref(safeJSONParse('hk_range_v25', { start: '2026-03-06', end: '2026-03-08' }));
-            const tripDates = ref(safeJSONParse('hk_dates_v25', initData.dates));
-            const itineraryList = ref(safeJSONParse('hk_itinerary_v25', initData.itinerary));
-            const flights = ref(safeJSONParse('hk_flights_v25', initData.flights));
-            const hotels = ref(safeJSONParse('hk_hotels_v25', initData.hotels));
-            const shoppingList = ref(safeJSONParse('hk_shopping_v25', initData.shopping));
-            const foodList = ref(safeJSONParse('hk_food_v25', initData.food));
-            const generalInfoList = ref(safeJSONParse('hk_general_v25', []));
-            const expenseList = ref(safeJSONParse('hk_expense_v25', []));
+            // Data Containers
+            const tripRange = ref(safeJSONParse('hk_range_v26', { start: '2026-03-06', end: '2026-03-08' }));
+            const tripDates = ref(safeJSONParse('hk_dates_v26', initData.dates));
+            const itineraryList = ref(safeJSONParse('hk_itinerary_v26', initData.itinerary));
+            const flights = ref(safeJSONParse('hk_flights_v26', initData.flights));
+            const hotels = ref(safeJSONParse('hk_hotels_v26', initData.hotels));
+            const shoppingList = ref(safeJSONParse('hk_shopping_v26', initData.shopping));
+            const foodList = ref(safeJSONParse('hk_food_v26', initData.food));
+            const generalInfoList = ref(safeJSONParse('hk_general_v26', []));
+            const expenseList = ref(safeJSONParse('hk_expense_v26', []));
 
             const activeDateId = ref('d1');
             const tempRange = ref({ ...tripRange.value });
@@ -646,7 +646,6 @@
                             isRemoteUpdate = true;
 
                             if (data) {
-                                // Load from Cloud
                                 tripRange.value = data.range || { start: '', end: '' };
                                 tripDates.value = data.dates || [];
                                 itineraryList.value = data.itinerary || [];
@@ -660,9 +659,6 @@
                                 if (!activeDateId.value && tripDates.value.length > 0) {
                                     activeDateId.value = tripDates.value[0].id;
                                 }
-                            } else {
-                                // Cloud empty? We have local defaults, push them?
-                                // Optional: pushDefaultsToCloud();
                             }
                             setTimeout(() => { isSyncing.value = false; isRemoteUpdate = false; }, 500);
                         }, (error) => {
@@ -699,7 +695,6 @@
                 });
             };
 
-            // Reset / Import Default Data
             const resetToDefault = () => {
                 if(confirm('這將會清空目前資料並載入「3/6 - 3/8」預設行程，確定嗎？')) {
                     tripRange.value = { start: '2026-03-06', end: '2026-03-08' };
@@ -716,20 +711,17 @@
                 }
             };
 
-            // Watchers for Persistence
+            // Watchers (using v26 keys to avoid conflicts with broken versions)
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                // Local Storage Backup
-                localStorage.setItem('hk_range_v25', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v25', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v25', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v25', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v25', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v25', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v25', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v25', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v25', JSON.stringify(expenseList.value));
-                
-                // Cloud Sync
+                localStorage.setItem('hk_range_v26', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v26', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v26', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v26', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v26', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v26', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v26', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v26', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v26', JSON.stringify(expenseList.value));
                 updateFirebase();
             }, { deep: true });
 
@@ -737,6 +729,12 @@
             const copyShareLink = () => {
                 const url = window.location.href;
                 navigator.clipboard.writeText(url).then(() => alert('連結已複製！傳給朋友即可分享行程'));
+            };
+
+            const getMapUrl = (name, region) => {
+                // 組合 地區 + 名稱 以提高搜尋準確度 (例: 尖沙咀 華嫂冰室)
+                const query = (region ? region + ' ' : '') + (name || '');
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
             };
 
             const newItem = ref({ name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
@@ -829,7 +827,8 @@
                 weather, exchangeRate, flights, hotels, shoppingList, foodList, generalInfoList, expenseList, totalExpenseHKD, totalExpenseTWD,
                 newFlight, newHotel, newListEntry, newGeneralInfo, newExpense, listType,
                 formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, openExpenseModal, handleItemClick, copyShareLink, resetToDefault,
-                saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, saveExpense, deleteItem, getStyles, getPayerColor
+                saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, saveExpense, deleteItem, getStyles, getPayerColor,
+                getMapUrl
             };
         }
     }).mount('#app');
