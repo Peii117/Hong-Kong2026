@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 (v27同步加強版)</title>
+    <title>香港之旅 - 3/6~3/8 (v28 匯率修復版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -95,21 +95,20 @@
                     <button @click="openSyncModal" class="w-full py-3 bg-gray-800 text-white rounded-xl text-xs font-bold flex items-center justify-center hover:bg-gray-700 transition-colors">
                         <i class="fas fa-sync-alt mr-2"></i> 同步設定 / 切換 ID
                     </button>
-                    
                     <button @click="copyShareLink" class="w-full py-3 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold flex items-center justify-center hover:bg-blue-100 transition-colors">
                         <i class="fas fa-link mr-2"></i> 複製目前連結
                     </button>
-                    
                     <button @click="resetToDefault" class="w-full py-3 border-2 border-red-100 text-red-400 rounded-xl text-xs font-bold flex items-center justify-center hover:bg-red-50 transition-colors">
                         <i class="fas fa-undo mr-2"></i> 匯入預設行程
                     </button>
                 </div>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Version 27 (Sync Fix)</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Version 28 (Rate Fix)</div>
         </aside>
     </transition>
 
     <main class="p-4 pb-20">
+        
         <section v-if="activeTab === 'info'" class="scale-in-center space-y-6">
             <div class="bg-gradient-to-br from-blue-500 to-royal-blue rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden">
                 <div class="relative z-10 flex justify-between items-center">
@@ -125,6 +124,22 @@
                     </div>
                 </div>
             </div>
+
+            <div class="bg-white border border-gray-100 rounded-[1.5rem] p-4 shadow-sm flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">即時匯率</p>
+                        <p class="font-black text-gray-800 text-lg">1 HKD ≈ {{ exchangeRate }} TWD</p>
+                    </div>
+                </div>
+                <button @click="fetchRate" class="text-gray-400 p-2 active:text-emerald-500 active:rotate-180 transition-all">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+
             <div class="space-y-4">
                 <div class="flex justify-between items-center px-2">
                     <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-info-circle mr-2 text-royal-blue"></i>旅行筆記</h4>
@@ -485,7 +500,7 @@
 </div>
 
 <script>
-    // --- Firebase Setup (Integrated) ---
+    // --- Firebase Setup (Same as v27) ---
     const firebaseConfig = {
         apiKey: "AIzaSyD1pbRlGwZMMle7cGo7lFlcCqp5M_4vhbg",
         authDomain: "hk2026-6cda5.firebaseapp.com",
@@ -507,7 +522,7 @@
 
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
-    // ... (Configuration Objects kept same as v26) ...
+    // Configuration
     const categoryConfig = {
         '景點': { bg: 'bg-blue-600 border-blue-700', border: 'border-blue-600', shadow: 'shadow-blue-50' },
         '美食': { bg: 'bg-orange-500 border-orange-600', border: 'border-orange-500', shadow: 'shadow-orange-50' },
@@ -625,8 +640,8 @@
             const showListModal = ref(false);
             const showGeneralInfoModal = ref(false);
             const showExpenseModal = ref(false);
-            const showSyncModal = ref(false); // New Sync Modal
-            const manualIdInput = ref(''); // For manual join
+            const showSyncModal = ref(false); 
+            const manualIdInput = ref(''); 
             
             const isNewItem = ref(true);
             const selectedItem = ref(null);
@@ -661,11 +676,10 @@
             const connectToFirebase = (id) => {
                 if (!db) return;
                 
-                // Unsubscribe previous listener if exists
                 if (dbRef) dbRef.off();
                 
                 tripId.value = id;
-                window.location.hash = id; // Update URL
+                window.location.hash = id;
                 dbRef = db.ref('trips/' + id);
 
                 dbRef.on('value', (snapshot) => {
@@ -675,7 +689,6 @@
                     isRemoteUpdate = true;
 
                     if (data) {
-                        // 如果雲端有資料，覆蓋本地資料
                         if(data.range) tripRange.value = data.range;
                         if(data.dates) tripDates.value = data.dates;
                         if(data.itinerary) itineraryList.value = data.itinerary;
@@ -690,7 +703,6 @@
                             activeDateId.value = tripDates.value[0].id;
                         }
                     } else {
-                        // 如果雲端是空的（新房間），把本地資料推上去
                         updateFirebase();
                     }
                     setTimeout(() => { isSyncing.value = false; isRemoteUpdate = false; }, 500);
@@ -760,7 +772,6 @@
             };
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                // Save to local
                 localStorage.setItem('hk_range_v26', JSON.stringify(tripRange.value));
                 localStorage.setItem('hk_dates_v26', JSON.stringify(tripDates.value));
                 localStorage.setItem('hk_itinerary_v26', JSON.stringify(itineraryList.value));
@@ -770,7 +781,6 @@
                 localStorage.setItem('hk_food_v26', JSON.stringify(foodList.value));
                 localStorage.setItem('hk_general_v26', JSON.stringify(generalInfoList.value));
                 localStorage.setItem('hk_expense_v26', JSON.stringify(expenseList.value));
-                // Push to cloud
                 updateFirebase();
             }, { deep: true });
 
@@ -784,7 +794,6 @@
                 return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
             };
 
-            // ... (Other helpers same as v26) ...
             const newItem = ref({ name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
             const newFlight = ref({ code: '', depCity: '', arrCity: '', depTime: '', arrTime: '' });
             const newHotel = ref({ name: '', address: '', checkIn: '', checkOut: '' });
@@ -841,7 +850,6 @@
                 showRangeModal.value = false;
             };
             
-            // New modal helpers
             const openSyncModal = () => { showSyncModal.value = true; };
             const openAddModal = () => { isNewItem.value = true; newItem.value = { id: Date.now(), name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: activeDateId.value, durationHours: 1, durationMinutes: 0 }; showEditModal.value = true; };
             const openListModal = (type, item) => { listType.value = type; if (item) { isNewItem.value = false; newListEntry.value = { ...item }; } else { isNewItem.value = true; newListEntry.value = { id: Date.now(), name: '', region: '', info: '', notes: '', checked: false }; } showListModal.value = true; };
@@ -879,7 +887,7 @@
                 newFlight, newHotel, newListEntry, newGeneralInfo, newExpense, listType,
                 formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, openExpenseModal, openSyncModal, joinRoom, handleItemClick, copyShareLink, resetToDefault,
                 saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, saveExpense, deleteItem, getStyles, getPayerColor,
-                getMapUrl
+                getMapUrl, fetchRate
             };
         }
     }).mount('#app');
