@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港之旅 - 3/6~3/8 (v28 匯率修復版)</title>
+    <title>香港之旅 - 3/6~3/8 (v29 診斷版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -31,6 +31,14 @@
 
 <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative">
 
+    <div v-if="errorMessage" class="fixed bottom-4 left-4 right-4 bg-red-500 text-white p-4 rounded-2xl shadow-2xl z-[100] flex items-center justify-between scale-in-center">
+        <div class="text-xs font-bold">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            {{ errorMessage }}
+        </div>
+        <button @click="errorMessage = ''" class="ml-4 text-white/80"><i class="fas fa-times"></i></button>
+    </div>
+
     <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 p-4">
         <div class="flex justify-between items-center mb-2">
             <button @click="isMenuOpen = true" class="text-gray-600 text-xl p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -45,7 +53,7 @@
                     <button @click="openSyncModal" class="flex items-center mt-1 px-2 py-0.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors">
                         <span class="w-1.5 h-1.5 rounded-full mr-1" :class="[dbConnected ? 'bg-green-500' : 'bg-red-400', isSyncing ? 'animate-ping' : '']"></span> 
                         <span class="text-[9px] font-bold text-gray-500">
-                            {{ dbConnected ? (isSyncing ? '同步中...' : '已連線: ' + tripId.substring(0,6)+'...') : '離線 (點此同步)' }}
+                            {{ dbConnected ? (isSyncing ? '同步中...' : 'ID: ' + tripId.substring(0,4)+'...') : '檢查連線' }}
                         </span>
                     </button>
                 </div>
@@ -103,7 +111,7 @@
                     </button>
                 </div>
             </div>
-            <div class="text-xs text-gray-300 text-center font-bold">Version 28 (Rate Fix)</div>
+            <div class="text-xs text-gray-300 text-center font-bold">Version 29 (Diagnostic)</div>
         </aside>
     </transition>
 
@@ -127,17 +135,13 @@
 
             <div class="bg-white border border-gray-100 rounded-[1.5rem] p-4 shadow-sm flex justify-between items-center">
                 <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fas fa-exchange-alt"></i></div>
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">即時匯率</p>
                         <p class="font-black text-gray-800 text-lg">1 HKD ≈ {{ exchangeRate }} TWD</p>
                     </div>
                 </div>
-                <button @click="fetchRate" class="text-gray-400 p-2 active:text-emerald-500 active:rotate-180 transition-all">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
+                <button @click="fetchRate" class="text-gray-400 p-2 active:text-emerald-500 active:rotate-180 transition-all"><i class="fas fa-sync-alt"></i></button>
             </div>
 
             <div class="space-y-4">
@@ -156,7 +160,7 @@
                 </div>
                 <div v-else class="text-center py-6 bg-gray-50 rounded-[1.5rem] text-gray-300 text-xs font-bold border-2 border-dashed border-gray-100">暫無筆記</div>
             </div>
-            
+
             <div class="space-y-4">
                 <div class="flex justify-between items-center px-2">
                     <h4 class="font-black text-gray-800 flex items-center"><i class="fas fa-plane-departure mr-2 text-royal-blue"></i>航班與住宿</h4>
@@ -324,33 +328,26 @@
         <div @click="showSyncModal = false" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
         <div class="relative bg-white w-full max-w-sm rounded-[3rem] p-8 scale-in-center shadow-2xl text-center">
             <h2 class="text-2xl font-black mb-2 text-gray-800">同步設定</h2>
-            <p class="text-xs text-gray-400 mb-6">請確保大家的 ID 是一樣的，才能看到相同內容。</p>
-            
             <div class="bg-gray-100 rounded-2xl p-4 mb-6">
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">您的目前 ID</p>
                 <p class="font-mono font-black text-xl text-royal-blue select-all">{{ tripId }}</p>
             </div>
-
             <div class="space-y-4">
                 <button @click="copyShareLink" class="w-full py-4 bg-gray-800 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
                     <i class="fas fa-copy mr-2"></i>複製連結傳給朋友
                 </button>
-                
                 <div class="relative flex py-2 items-center">
-                    <div class="flex-grow border-t border-gray-200"></div>
-                    <span class="flex-shrink-0 mx-4 text-gray-300 text-xs font-bold">或者手動輸入</span>
-                    <div class="flex-grow border-t border-gray-200"></div>
+                    <div class="flex-grow border-t border-gray-200"></div><span class="flex-shrink-0 mx-4 text-gray-300 text-xs font-bold">或者手動輸入</span><div class="flex-grow border-t border-gray-200"></div>
                 </div>
-
                 <div class="flex space-x-2">
-                    <input v-model="manualIdInput" placeholder="輸入朋友的 ID (例如 trip_xxx)" class="flex-1 bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-royal-blue">
-                    <button @click="joinRoom" class="bg-royal-blue text-white px-6 py-3 rounded-2xl font-bold shadow-md disabled:opacity-50" :disabled="!manualIdInput">
-                        加入
-                    </button>
+                    <input v-model="manualIdInput" placeholder="輸入 ID (如 trip_xxx)" class="flex-1 bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-royal-blue">
+                    <button @click="joinRoom" class="bg-royal-blue text-white px-6 py-3 rounded-2xl font-bold shadow-md disabled:opacity-50" :disabled="!manualIdInput">加入</button>
                 </div>
             </div>
-            
-            <button @click="showSyncModal = false" class="mt-6 text-gray-400 text-sm font-bold">關閉</button>
+            <div class="mt-6 border-t border-gray-100 pt-4">
+                <button @click="testConnection" class="text-xs text-gray-400 font-bold hover:text-royal-blue"><i class="fas fa-stethoscope mr-1"></i>測試資料庫連線權限</button>
+            </div>
+            <button @click="showSyncModal = false" class="mt-4 text-gray-400 text-sm font-bold">關閉</button>
         </div>
     </div>
 
@@ -500,7 +497,6 @@
 </div>
 
 <script>
-    // --- Firebase Setup (Same as v27) ---
     const firebaseConfig = {
         apiKey: "AIzaSyD1pbRlGwZMMle7cGo7lFlcCqp5M_4vhbg",
         authDomain: "hk2026-6cda5.firebaseapp.com",
@@ -522,7 +518,6 @@
 
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
-    // Configuration
     const categoryConfig = {
         '景點': { bg: 'bg-blue-600 border-blue-700', border: 'border-blue-600', shadow: 'shadow-blue-50' },
         '美食': { bg: 'bg-orange-500 border-orange-600', border: 'border-orange-500', shadow: 'shadow-orange-50' },
@@ -642,6 +637,7 @@
             const showExpenseModal = ref(false);
             const showSyncModal = ref(false); 
             const manualIdInput = ref(''); 
+            const errorMessage = ref(''); // v29 Error state
             
             const isNewItem = ref(true);
             const selectedItem = ref(null);
@@ -649,16 +645,15 @@
             const isSyncing = ref(false);
             const dbConnected = ref(false);
             
-            // Data
-            const tripRange = ref(safeJSONParse('hk_range_v26', { start: '2026-03-06', end: '2026-03-08' }));
-            const tripDates = ref(safeJSONParse('hk_dates_v26', initData.dates));
-            const itineraryList = ref(safeJSONParse('hk_itinerary_v26', initData.itinerary));
-            const flights = ref(safeJSONParse('hk_flights_v26', initData.flights));
-            const hotels = ref(safeJSONParse('hk_hotels_v26', initData.hotels));
-            const shoppingList = ref(safeJSONParse('hk_shopping_v26', initData.shopping));
-            const foodList = ref(safeJSONParse('hk_food_v26', initData.food));
-            const generalInfoList = ref(safeJSONParse('hk_general_v26', []));
-            const expenseList = ref(safeJSONParse('hk_expense_v26', []));
+            const tripRange = ref(safeJSONParse('hk_range_v29', { start: '2026-03-06', end: '2026-03-08' }));
+            const tripDates = ref(safeJSONParse('hk_dates_v29', initData.dates));
+            const itineraryList = ref(safeJSONParse('hk_itinerary_v29', initData.itinerary));
+            const flights = ref(safeJSONParse('hk_flights_v29', initData.flights));
+            const hotels = ref(safeJSONParse('hk_hotels_v29', initData.hotels));
+            const shoppingList = ref(safeJSONParse('hk_shopping_v29', initData.shopping));
+            const foodList = ref(safeJSONParse('hk_food_v29', initData.food));
+            const generalInfoList = ref(safeJSONParse('hk_general_v29', []));
+            const expenseList = ref(safeJSONParse('hk_expense_v29', []));
 
             const activeDateId = ref('d1');
             const tempRange = ref({ ...tripRange.value });
@@ -667,15 +662,12 @@
             const exchangeRate = ref('--');
             const payers = ['沛晴', '芳晨', '玟妤'];
 
-            // Firebase State
             const tripId = ref('');
             let dbRef = null;
             let isRemoteUpdate = false; 
 
-            // Firebase Logic
             const connectToFirebase = (id) => {
                 if (!db) return;
-                
                 if (dbRef) dbRef.off();
                 
                 tripId.value = id;
@@ -703,11 +695,13 @@
                             activeDateId.value = tripDates.value[0].id;
                         }
                     } else {
+                        // v29: If empty, auto-push existing local data to "claim" this room
                         updateFirebase();
                     }
                     setTimeout(() => { isSyncing.value = false; isRemoteUpdate = false; }, 500);
                 }, (error) => {
                     console.error("Firebase Read Error:", error);
+                    errorMessage.value = "讀取失敗：權限不足。請檢查 Firebase Rules 設定。";
                     dbConnected.value = false;
                 });
             };
@@ -741,8 +735,20 @@
                     setTimeout(() => isSyncing.value = false, 500);
                 }).catch(e => {
                     console.error("Sync failed:", e);
+                    errorMessage.value = "同步失敗：權限不足。請確認 Firebase Rules 已設為 true。";
                     isSyncing.value = false;
                 });
+            };
+
+            const testConnection = () => {
+                errorMessage.value = '';
+                if(!dbRef) return alert("尚未連線");
+                dbRef.update({ last_test: new Date().toISOString() })
+                    .then(() => alert("測試成功！寫入權限正常。"))
+                    .catch(e => {
+                        alert("測試失敗！請檢查 Firebase Console 的 Rules 設定。");
+                        errorMessage.value = "測試失敗：" + e.message;
+                    });
             };
 
             const joinRoom = () => {
@@ -772,15 +778,15 @@
             };
 
             watch([tripRange, tripDates, itineraryList, flights, hotels, shoppingList, foodList, generalInfoList, expenseList], () => {
-                localStorage.setItem('hk_range_v26', JSON.stringify(tripRange.value));
-                localStorage.setItem('hk_dates_v26', JSON.stringify(tripDates.value));
-                localStorage.setItem('hk_itinerary_v26', JSON.stringify(itineraryList.value));
-                localStorage.setItem('hk_flights_v26', JSON.stringify(flights.value));
-                localStorage.setItem('hk_hotels_v26', JSON.stringify(hotels.value));
-                localStorage.setItem('hk_shopping_v26', JSON.stringify(shoppingList.value));
-                localStorage.setItem('hk_food_v26', JSON.stringify(foodList.value));
-                localStorage.setItem('hk_general_v26', JSON.stringify(generalInfoList.value));
-                localStorage.setItem('hk_expense_v26', JSON.stringify(expenseList.value));
+                localStorage.setItem('hk_range_v29', JSON.stringify(tripRange.value));
+                localStorage.setItem('hk_dates_v29', JSON.stringify(tripDates.value));
+                localStorage.setItem('hk_itinerary_v29', JSON.stringify(itineraryList.value));
+                localStorage.setItem('hk_flights_v29', JSON.stringify(flights.value));
+                localStorage.setItem('hk_hotels_v29', JSON.stringify(hotels.value));
+                localStorage.setItem('hk_shopping_v29', JSON.stringify(shoppingList.value));
+                localStorage.setItem('hk_food_v29', JSON.stringify(foodList.value));
+                localStorage.setItem('hk_general_v29', JSON.stringify(generalInfoList.value));
+                localStorage.setItem('hk_expense_v29', JSON.stringify(expenseList.value));
                 updateFirebase();
             }, { deep: true });
 
@@ -791,7 +797,7 @@
 
             const getMapUrl = (name, region) => {
                 const query = (region ? region + ' ' : '') + (name || '');
-                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                return `http://googleusercontent.com/maps.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
             };
 
             const newItem = ref({ name: '', time: '09:00', category: '景點', region: '', notes: '', dateId: '', durationHours: 1, durationMinutes: 0 });
@@ -882,12 +888,12 @@
             return {
                 isMenuOpen, isEditMode, activeTab, menus, activeMenuName, tripRange, tripDates, activeDateId, isSyncing, dbConnected, tripId,
                 showRangeModal, showEditModal, showDetailModal, showFlightModal, showHotelModal, showListModal, showGeneralInfoModal, showExpenseModal, showSyncModal,
-                tempRange, currentItinerary, currentDayNumber, isNewItem, newItem, selectedItem, categoryConfig, payers, manualIdInput,
+                tempRange, currentItinerary, currentDayNumber, isNewItem, newItem, selectedItem, categoryConfig, payers, manualIdInput, errorMessage,
                 weather, exchangeRate, flights, hotels, shoppingList, foodList, generalInfoList, expenseList, totalExpenseHKD, totalExpenseTWD,
                 newFlight, newHotel, newListEntry, newGeneralInfo, newExpense, listType,
                 formatDate, applyDateRange, openAddModal, openListModal, openGeneralInfoModal, openExpenseModal, openSyncModal, joinRoom, handleItemClick, copyShareLink, resetToDefault,
                 saveItem, saveListEntry, saveFlight, saveHotel, saveGeneralInfo, saveExpense, deleteItem, getStyles, getPayerColor,
-                getMapUrl, fetchRate
+                getMapUrl, fetchRate, testConnection
             };
         }
     }).mount('#app');
